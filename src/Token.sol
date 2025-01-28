@@ -19,5 +19,9 @@ contract Token is ERC20 {
         return 1;
     }
 
+    function burn (address _account, uint256 _amount) public {
+        _burn(_account, _amount);
+    }
+
 
 }

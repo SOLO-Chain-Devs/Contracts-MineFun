@@ -60,6 +60,33 @@ contract TokenFactory {
         return cost;
     }
 
+    function calculateRevenue(
+        uint256 currentSupply,
+        uint256 tokensToSell
+    ) public pure returns (uint256) {
+        // Ensure tokensToSell does not exceed the current supply
+        require(
+            tokensToSell <= currentSupply,
+            "Cannot sell more tokens than available supply"
+        );
+
+        // Calculate the exponent parts scaled to avoid precision loss
+        uint256 exponent1 = (K * currentSupply) / 10 ** 18;
+        uint256 exponent2 = (K * (currentSupply - tokensToSell)) / 10 ** 18;
+
+        // Calculate e^(kx) using the exp function
+        uint256 exp1 = exp(exponent1);
+        uint256 exp2 = exp(exponent2);
+
+        console.log("exp1", exp1);
+        console.log("exp2", exp2);
+
+        // Revenue formula: (P0 / k) * (e^(k * currentSupply) - e^(k * (currentSupply - tokensToSell)))
+        // Use (P0 * 10^18) / k to avoid division by zero
+        uint256 revenue = (INITIAL_PRICE * 10 ** 18 * (exp1 - exp2)) / K; // Adjust for k scaling
+        return revenue;
+    }
+
     // Improved helper function to calculate e^x for larger x using a Taylor series approximation
     function exp(uint256 x) internal pure returns (uint256) {
         uint256 sum = 10 ** 18; // Start with 1 * 10^18 for precision
@@ -105,15 +132,7 @@ contract TokenFactory {
         return memeTokenAddress;
     }
 
-    function getAllMemeTokens() public view returns (memeToken[] memory) {
-        memeToken[] memory allTokens = new memeToken[](
-            memeTokenAddresses.length
-        );
-        for (uint i = 0; i < memeTokenAddresses.length; i++) {
-            allTokens[i] = addressToMemeTokenMapping[memeTokenAddresses[i]];
-        }
-        return allTokens;
-    }
+    
 
     function buyMemeToken(
         address memeTokenAddress,
@@ -200,6 +219,58 @@ contract TokenFactory {
         return 1;
     }
 
+    function sellMemeToken(
+        address memeTokenAddress,
+        uint tokenQty
+    ) public returns (uint) {
+        // Check if the meme token is listed
+        require(
+            addressToMemeTokenMapping[memeTokenAddress].tokenAddress !=
+                address(0),
+            "Token is not listed"
+        );
+
+        memeToken storage listedToken = addressToMemeTokenMapping[
+            memeTokenAddress
+        ];
+
+        Token memeTokenCt = Token(memeTokenAddress);
+
+        // Check if the user has enough tokens to sell
+        uint tokenQtyScaled = tokenQty * DECIMALS;
+        require(
+            memeTokenCt.balanceOf(msg.sender) >= tokenQtyScaled,
+            "Not enough tokens to sell"
+        );
+
+        // Calculate the current scaled supply and the revenue for selling tokens
+        uint currentSupply = memeTokenCt.totalSupply();
+        uint currentSupplyScaled = (currentSupply - INIT_SUPPLY) / DECIMALS;
+
+        uint revenue = calculateRevenue(currentSupplyScaled, tokenQty);
+        console.log("ETH revenue for selling tokens is ", revenue);
+
+        // Ensure the contract has enough ETH to pay the seller
+        require(
+            address(this).balance >= revenue,
+            "Contract does not have enough ETH to pay"
+        );
+
+        // Burn the sold tokens to reduce supply
+        memeTokenCt.burn(msg.sender, tokenQtyScaled);
+
+        // Transfer ETH to the seller
+        (bool success, ) = msg.sender.call{value: revenue}("");
+        require(success, "Failed to transfer ETH");
+
+        console.log(
+            "New total supply after selling tokens: ",
+            memeTokenCt.totalSupply()
+        );
+
+        return revenue;
+    }
+
     function _createLiquidityPool(
         address memeTokenAddress
     ) internal returns (address) {
@@ -243,4 +314,52 @@ contract TokenFactory {
         console.log("Uni v2 tokens burnt");
         return 1;
     }
+
+    function getAllMemeTokens() public view returns (memeToken[] memory) {
+        memeToken[] memory allTokens = new memeToken[](
+            memeTokenAddresses.length
+        );
+        for (uint i = 0; i < memeTokenAddresses.length; i++) {
+            allTokens[i] = addressToMemeTokenMapping[memeTokenAddresses[i]];
+        }
+        return allTokens;
+    }
+
+    function getRequiredEthForPurchase(
+    address memeTokenAddress,
+    uint tokenQty
+) public view returns (uint requiredEth) {
+    // Check if the meme token is listed
+    require(
+        addressToMemeTokenMapping[memeTokenAddress].tokenAddress != address(0),
+        "Token is not listed"
+    );
+
+    memeToken storage listedToken = addressToMemeTokenMapping[memeTokenAddress];
+    Token memeTokenCt = Token(memeTokenAddress);
+
+    // Ensure funding goal is not met
+    require(
+        listedToken.fundingRaised <= MEMECOIN_FUNDING_GOAL,
+        "Funding has already been raised"
+    );
+
+    // Check the available supply
+    uint currentSupply = memeTokenCt.totalSupply();
+    uint availableQty = MAX_SUPPLY - currentSupply;
+
+    // Scale values for calculations
+    uint scaledAvailableQty = availableQty / DECIMALS;
+
+    require(
+        tokenQty <= scaledAvailableQty,
+        "Not enough available supply"
+    );
+
+    // Calculate the cost for purchasing `tokenQty` tokens using the bonding curve formula
+    uint currentSupplyScaled = (currentSupply - INIT_SUPPLY) / DECIMALS;
+    requiredEth = calculateCost(currentSupplyScaled, tokenQty);
+
+    return requiredEth;
+}
 }
