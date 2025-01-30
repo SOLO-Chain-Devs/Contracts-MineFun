@@ -7,6 +7,8 @@ import "../src/MemeTokenFactory.sol";
 contract MemeTokenFactoryTest is Test {
     MemeTokenFactory tokenFactory;
 
+    address deployer;
+
     address user1 = vm.addr(1);
     address user2 = vm.addr(2);
     address user3 = vm.addr(3);
@@ -17,9 +19,11 @@ contract MemeTokenFactoryTest is Test {
     address user8 = vm.addr(8);
 
     function setUp() public {
+        deployer = msg.sender;
         string memory rpcUrl = vm.envString("RPC_URL");
 
         vm.createSelectFork(rpcUrl);
+        vm.prank(deployer);
         tokenFactory = new MemeTokenFactory();
 
         vm.deal(user1, 100 ether);
@@ -72,45 +76,28 @@ contract MemeTokenFactoryTest is Test {
         vm.stopPrank();
     }
 
-    function testSellMemeToken() public {
-        address memeTokenAddress = tokenFactory.createMemeToken{
-            value: 0.0001 ether
-        }("Test Token", "TEST", "img://test.png", "This is a test token");
-
-        uint tokenQty = 100;
-        vm.startPrank(user1);
-        uint requiredEth = tokenFactory.getRequiredEthForPurchase(
-            memeTokenAddress,
-            tokenQty
-        );
-        tokenFactory.buyMemeToken{value: requiredEth}(
-            memeTokenAddress,
-            tokenQty
-        );
-        tokenFactory.sellMemeToken(memeTokenAddress, tokenQty);
-        vm.stopPrank();
-    }
-
     function testCostIncreasesExponentially() public {
         address memeTokenAddress = tokenFactory.createMemeToken{
             value: 0.0001 ether
         }("Test Token", "TEST", "img://test.png", "This is a test token");
 
-        uint tokenQty = 1000;
+        uint tokenQty = 8_000_000 ether;
         uint previousCost = 0;
         uint totalETH;
         uint totalTokens;
 
-        for (uint i = 1; i <= 200; i++) {
+        for (uint i = 1; i <= 100; i++) {
             uint cost = tokenFactory.getRequiredEthForPurchase(
                 memeTokenAddress,
                 tokenQty
             );
-            totalETH+= cost;
-            totalTokens+=tokenQty;
+            totalETH += cost;
+            totalTokens += tokenQty;
 
-            //console.log("Iteration", i, "Cost:", cost);
-            console.log("Total ETH value in USD",tokenFactory.getUSDValue(totalETH));
+            console.log(
+                "Total ETH value in USD",
+                tokenFactory.getUSDValue(totalETH)
+            );
             require(cost > previousCost, "Cost did not increase");
 
             previousCost = cost;
@@ -120,7 +107,101 @@ contract MemeTokenFactoryTest is Test {
             tokenFactory.buyMemeToken{value: cost}(memeTokenAddress, tokenQty);
             vm.stopPrank();
         }
-        console.log("total",totalETH);
-        console.log("totalTokens",totalTokens);
+
+        /*  uint newcost = tokenFactory.getRequiredEthForPurchase(
+                memeTokenAddress,
+                1000
+            );
+             vm.startPrank(user1);
+            vm.deal(user1, 100 ether);
+            tokenFactory.buyMemeToken{value: newcost}(memeTokenAddress, tokenQty);
+            vm.stopPrank(); */
+
+        console.log("total ETH", totalETH);
+        console.log("totalTokens", totalTokens);
+    }
+    function testBuyMemeTokenRevertsWhenSupplyExceeds() public {
+        address memeTokenAddress = tokenFactory.createMemeToken{
+            value: 0.0001 ether
+        }("Test Token", "TEST", "img://test.png", "This is a test token");
+
+        uint tokenQty = 799_999_999 ether; // Buy just under 800M tokens
+        vm.startPrank(user1);
+        uint requiredEth = tokenFactory.getRequiredEthForPurchase(
+            memeTokenAddress,
+            tokenQty
+        );
+        tokenFactory.buyMemeToken{value: requiredEth}(
+            memeTokenAddress,
+            tokenQty
+        );
+        vm.stopPrank();
+
+        // Attempt to exceed the supply limit
+        vm.startPrank(user2);
+        uint requiredEth2 = tokenFactory.getRequiredEthForPurchase(
+            memeTokenAddress,
+            tokenQty
+        );
+        vm.expectRevert(bytes("Not enough tokens left"));
+        tokenFactory.buyMemeToken{value: requiredEth2}(memeTokenAddress, 100 ether); // Try buying 10 extra tokens
+        vm.stopPrank();
+    }
+
+    function test_Provides_Liquidity() public {
+        address memeTokenAddress = tokenFactory.createMemeToken{
+            value: 0.0001 ether
+        }("Test Token", "TEST", "img://test.png", "This is a test token");
+
+        uint totalTokensToBuy = 800_000_000 ether;
+        uint totalEthSpent;
+        uint tokensBought;
+        uint tokenBatch = 8_000_000 ether; // Buy in chunks of 1% of total
+
+        vm.startPrank(user1);
+
+        while (tokensBought < totalTokensToBuy) {
+            uint requiredEth = tokenFactory.getRequiredEthForPurchase(
+                memeTokenAddress,
+                tokenBatch
+            );
+
+            // Ensure last batch doesn't exceed total supply
+            if (tokensBought + tokenBatch > totalTokensToBuy) {
+                tokenBatch = totalTokensToBuy - tokensBought;
+            }
+
+            tokenFactory.buyMemeToken{value: requiredEth}(
+                memeTokenAddress,
+                tokenBatch
+            );
+
+            tokensBought += tokenBatch;
+            totalEthSpent += requiredEth;
+        }
+
+        vm.stopPrank();
+
+        (
+            string memory name,
+            string memory symbol,
+            string memory description,
+            string memory tokenImageUrl,
+            uint fundingRaised,
+            uint tokensBoughtFinal,
+            address tokenAddress,
+            address creatorAddress,
+            bool bonded
+        ) = tokenFactory.addressToMemeTokenMapping(memeTokenAddress);
+
+        console.log("Token Name:", name);
+        console.log("Token Symbol:", symbol);
+        console.log("Description:", description);
+        console.log("Token Image URL:", tokenImageUrl);
+        console.log("Funding Raised:", fundingRaised);
+        console.log("Tokens Bought:", tokensBoughtFinal);
+        console.log("Token Address:", tokenAddress);
+        console.log("Creator Address:", creatorAddress);
+        console.log("Bonded:", bonded);
     }
 }

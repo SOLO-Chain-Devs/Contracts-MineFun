@@ -6,6 +6,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "forge-std/Test.sol";
 
 contract MemeTokenFactory is Ownable {
     IUniswapV2Router01 public immutable router;
@@ -16,19 +17,20 @@ contract MemeTokenFactory is Ownable {
         string description;
         string tokenImageUrl;
         uint fundingRaised;
+        uint tokensBought;
         address tokenAddress;
         address creatorAddress;
+        bool bonded;
     }
 
     address[] public memeTokenAddresses;
     mapping(address => MemeToken) public addressToMemeTokenMapping;
 
     uint constant MEMETOKEN_CREATION_FEE = 0.0001 ether;
-    uint constant MEMECOIN_FUNDING_GOAL = 10 ether;
-    uint constant MAX_SUPPLY = 1_000_000 * 1e18;
-    uint constant INIT_SUPPLY = (20 * MAX_SUPPLY) / 100;
-    uint constant BASE_PRICE = 0.00001 ether;
-    uint constant GROWTH_RATE = 0.0000001 ether;
+    uint constant MEMECOIN_FUNDING_GOAL = 6.5 ether;
+    uint constant MAX_SUPPLY = 1_000_000_000 * 1e18;
+    uint constant INIT_SUPPLY = (80 * MAX_SUPPLY) / 100; // 800M tokens
+    uint constant BASE_PRICE = 0.00000000185 ether;
 
     address constant UNISWAP_V2_FACTORY =
         0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
@@ -59,8 +61,10 @@ contract MemeTokenFactory is Ownable {
             description,
             imageUrl,
             0,
+            0,
             memeTokenAddress,
-            msg.sender
+            msg.sender,
+            false
         );
         memeTokenAddresses.push(memeTokenAddress);
         addressToMemeTokenMapping[memeTokenAddress] = newMemeToken;
@@ -81,55 +85,76 @@ contract MemeTokenFactory is Ownable {
         // Fetch the current supply of the token
         uint currentSupply = Token(memeTokenAddress).totalSupply();
 
-        // **Increase the growth multiplier** (Try different values: 2, 5, 10)
-        uint multiplier = 5;
+        // **Growth Multiplier**
+        uint multiplier = 1;
 
-        // Scale the supply fraction to make price rise more quickly
+        // **Scale supply fraction**
         uint scaledSupply = ((currentSupply * 1e18) / MAX_SUPPLY) * multiplier;
 
-        // **Make the growth factor more aggressive**
-        uint growthFactor = (1e18 + scaledSupply); // 1 + (scaledSupply * multiplier)
+        // **Growth factor**
+        uint growthFactor = 1e18 + scaledSupply;
 
-        // **Increase BASE_PRICE for a stronger effect**
-        uint adjustedPrice = (BASE_PRICE * growthFactor * 2) / 1e18; // Doubling for higher growth
+        // **Price adjustment**
+        uint adjustedPrice = (BASE_PRICE * growthFactor * 2) / 1e18;
 
-        // Final cost is the adjusted price multiplied by token quantity
-        requiredEth = adjustedPrice * tokenQty;
+        // ✅ **Final ETH required calculation (avoiding precision loss)**
+        requiredEth = (adjustedPrice * tokenQty) / 1e18;
 
         return requiredEth;
     }
 
     function buyMemeToken(
         address memeTokenAddress,
-        uint tokenQty
+        uint tokenQty // ✅ tokenQty is now in WEI
     ) public payable {
+        MemeToken storage listedToken = addressToMemeTokenMapping[
+            memeTokenAddress
+        ];
+
+        require(listedToken.tokenAddress != address(0), "Token not found");
+        require(!listedToken.bonded, "Token already bonded");
+
+        uint totalTokensAfterPurchase = listedToken.tokensBought + tokenQty;
+
         require(
-            addressToMemeTokenMapping[memeTokenAddress].tokenAddress !=
-                address(0),
-            "Token not found"
+            totalTokensAfterPurchase <= INIT_SUPPLY,
+            "Not enough tokens left"
         );
+
+        Token memeToken = Token(memeTokenAddress);
         uint requiredEth = getRequiredEthForPurchase(
             memeTokenAddress,
             tokenQty
         );
-        require(msg.value >= requiredEth, "Incorrect ETH sent");
+        require(msg.value == requiredEth, "Incorrect ETH amount sent");
 
-        MemeToken storage listedToken = addressToMemeTokenMapping[
-            memeTokenAddress
-        ];
-        Token memeToken = Token(memeTokenAddress);
-
-        require(
-            listedToken.fundingRaised < MEMECOIN_FUNDING_GOAL,
-            "Funding goal reached"
-        );
         listedToken.fundingRaised += msg.value;
+        listedToken.tokensBought = totalTokensAfterPurchase;
 
+        // **✅ Liquidity Provision Logic: Only Happens When Funding Goal is Met**
         if (listedToken.fundingRaised >= MEMECOIN_FUNDING_GOAL) {
-            _createLiquidityPool(memeTokenAddress);
+            if (!listedToken.bonded) {
+                _createLiquidityPool(memeTokenAddress);
+
+                // ✅ **Mint Remaining 200M Tokens**
+                uint remainingTokens = MAX_SUPPLY - INIT_SUPPLY;
+                memeToken.mint(address(this), remainingTokens);
+
+                // ✅ **Add Liquidity Using Remaining Tokens + Raised ETH**
+                _provideLiquidity(
+                    memeTokenAddress,
+                    remainingTokens,
+                    listedToken.fundingRaised
+                );
+
+                memeToken.renounceOwnership();
+
+                listedToken.bonded = true;
+            }
         }
 
-        memeToken.mint(tokenQty * 1e18, msg.sender);
+        // ✅ **Mint tokens for the buyer**
+        memeToken.mint(msg.sender, tokenQty);
     }
 
     function sellMemeToken(address memeTokenAddress, uint tokenQty) public {
@@ -193,6 +218,6 @@ contract MemeTokenFactory is Ownable {
         path[1] = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
         uint[] memory amountsOut = router.getAmountsOut(_amount, path);
-        return amountsOut[1]/1e6;
+        return amountsOut[1] / 1e6;
     }
 }
