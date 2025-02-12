@@ -10,13 +10,14 @@ contract Token is ERC20, Ownable {
         string memory symbol,
         uint initialMintValue
     ) ERC20(name, symbol) Ownable(msg.sender) {
+       // transferOwnership(msg.sender);
         _mint(msg.sender, initialMintValue);
     }
 
     function mint(
         address receiver,
         uint mintQty
-    ) external onlyOwner returns (uint) {
+    ) external onlyOwner() returns (uint) {
         _mint(receiver, mintQty);
         return 1;
     }

@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import "../src/MemeTokenFactory.sol";
+import {Token} from "../src/Token.sol";
 
 contract MemeTokenFactoryTest is Test {
     MemeTokenFactory tokenFactory;
@@ -37,9 +38,16 @@ contract MemeTokenFactoryTest is Test {
     }
 
     function testCreateMemeToken() public {
+        vm.prank(user1);
         address memeTokenAddress = tokenFactory.createMemeToken{
             value: 0.0001 ether
         }("Test Token", "TEST", "img://test.png", "This is a test token");
+
+        address token = Token(memeTokenAddress).owner();
+        console.log("Owner: ", token);
+        console.log("User1:", user1);
+        console.log("Factory: ", address(tokenFactory));
+        
 
         MemeTokenFactory.MemeToken[] memory tokens = tokenFactory
             .getAllMemeTokens();
@@ -58,7 +66,7 @@ contract MemeTokenFactoryTest is Test {
         );
     }
 
-    function testBuyMemeToken() public {
+    function testMineTokens() public {
         address memeTokenAddress = tokenFactory.createMemeToken{
             value: 0.0001 ether
         }("Test Token", "TEST", "img://test.png", "This is a test token");

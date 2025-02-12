@@ -33,9 +33,11 @@ contract MemeTokenFactory is Ownable {
     uint constant BASE_PRICE = 0.00000000185 ether;
 
     address constant UNISWAP_V2_FACTORY =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6;
     address constant UNISWAP_V2_ROUTER =
-        0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+        0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+    //0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address constant USDT = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
     constructor() Ownable(msg.sender) {
         router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
@@ -147,10 +149,9 @@ contract MemeTokenFactory is Ownable {
                     listedToken.fundingRaised
                 );
 
-                memeToken.renounceOwnership();
-
-                listedToken.bonded = true;
+                //memeToken.renounceOwnership();
             }
+            listedToken.bonded = true;
         }
 
         // ✅ **Mint tokens for the buyer**
@@ -215,7 +216,7 @@ contract MemeTokenFactory is Ownable {
     function getUSDValue(uint256 _amount) public view returns (uint) {
         address[] memory path = new address[](2);
         path[0] = router.WETH();
-        path[1] = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+        path[1] = USDT;
 
         uint[] memory amountsOut = router.getAmountsOut(_amount, path);
         return amountsOut[1] / 1e6;
