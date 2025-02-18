@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../src/MemeTokenFactory.sol";
+import "../src/Botfun.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -13,9 +13,9 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy the MemeTokenFactory contract
-        MemeTokenFactory tokenFactory = new MemeTokenFactory();
+        Botfun tokenFactory = new Botfun();
         console.log("MemeTokenFactory deployed at:", address(tokenFactory));
 
         vm.stopBroadcast();
     }
-}
+} 
