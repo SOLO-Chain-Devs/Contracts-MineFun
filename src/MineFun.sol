@@ -54,8 +54,16 @@ contract MineFun is Ownable {
         0xB2c5B17bF7A655B0FC3Eb44038E8A65EEa904407;
     address public constant UNISWAP_V2_ROUTER =
         0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70;
-    //0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+
     address public constant USDT = 0xdAa055658ab05B9e1d3c4a4827a88C25F51032B3;
+
+    // ✅ EVENTS
+    event MinedTokenCreated(address indexed tokenAddress, address indexed creator, uint bondingDeadline);
+    event TokenMined(address indexed tokenAddress, address indexed miner, uint amount);
+    event LiquidityPoolCreated(address indexed pairAddress, address indexed tokenAddress);
+    event LiquidityProvided(address indexed tokenAddress, uint tokenAmount, uint ethAmount);
+    event ContributionRefunded(address indexed tokenAddress, address indexed contributor, uint amount);
+    
 
     constructor(address _teamWallet) Ownable(msg.sender) {
         router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
@@ -97,6 +105,8 @@ contract MineFun is Ownable {
         newMinedToken.bonded = false;
 
         minedTokenAddresses.push(minedTokenAddress);
+
+        emit MinedTokenCreated(minedTokenAddress,msg.sender,newMinedToken.bondingDeadline);
         return minedTokenAddress;
     }
 
@@ -137,6 +147,8 @@ contract MineFun is Ownable {
 
         minedToken.mint(msg.sender, TOKENS_PER_MINE);
 
+        emit TokenMined(minedTokenAddress,msg.sender, TOKENS_PER_MINE);
+
         if (listedToken.fundingRaised >= MINEDTOKEN_FUNDING_GOAL) {
             _createLiquidityPool(minedTokenAddress);
             uint remainingTokens = MAX_SUPPLY - INIT_SUPPLY;
@@ -156,6 +168,7 @@ contract MineFun is Ownable {
         IUniswapV2Factory factory = IUniswapV2Factory(UNISWAP_V2_FACTORY);
 
         address pair = factory.createPair(memeTokenAddress, router.WETH());
+        emit LiquidityPoolCreated(pair,memeTokenAddress);
         return pair;
     }
 
@@ -175,6 +188,8 @@ contract MineFun is Ownable {
             address(this),
             block.timestamp
         );
+
+        emit LiquidityProvided(minedTokenAddress,tokenAmount,ethAmount);
         return liquidity;
     }
 
@@ -258,6 +273,8 @@ contract MineFun is Ownable {
         }
 
         payable(msg.sender).transfer(refundAmount);
+
+        emit ContributionRefunded(minedTokenAddress,msg.sender,refundAmount);
     }
 
     function getMinedTokenDetails(
