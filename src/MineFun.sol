@@ -111,56 +111,43 @@ contract MineFun is Ownable {
     }
 
     function mineToken(address minedTokenAddress) public payable {
-        MinedToken storage listedToken = addressToMinedTokenMapping[
-            minedTokenAddress
-        ];
-        require(listedToken.tokenAddress != address(0), "Token not found");
-        require(!listedToken.bonded, "Token already bonded");
-        require(
-            block.timestamp < listedToken.bondingDeadline,
-            "Bonding period expired"
-        );
-        require(
-            IERC20(minedTokenAddress).balanceOf(msg.sender) + TOKENS_PER_MINE <=
-                MAX_PER_WALLET,
-            "Maximum mine per wallet reached"
-        );
-        require(msg.value == PRICE_PER_MINE, "Incorrect ETH amount sent");
+    MinedToken storage listedToken = addressToMinedTokenMapping[minedTokenAddress];
+    require(listedToken.tokenAddress != address(0), "Token not found");
+    require(!listedToken.bonded, "Token already bonded");
+    require(block.timestamp < listedToken.bondingDeadline, "Bonding period expired");
+    require(
+        IERC20(minedTokenAddress).balanceOf(msg.sender) + TOKENS_PER_MINE <= MAX_PER_WALLET,
+        "Maximum mine per wallet reached"
+    );
+    require(msg.value == PRICE_PER_MINE, "Incorrect ETH amount sent");
 
-        uint ethForLiquidity = msg.value / 2; // 50% goes to liquidity
-        uint ethForTeam = msg.value - ethForLiquidity; // 50% reserved for the team
-        teamFunds[minedTokenAddress] += ethForTeam; // Store ETH for the team (to be withdrawn later)
+    uint ethForLiquidity = msg.value / 2;
+    uint ethForTeam = msg.value - ethForLiquidity;
+    teamFunds[minedTokenAddress] += ethForTeam;
 
-        uint totalTokensAfterPurchase = listedToken.tokensBought +
-            TOKENS_PER_MINE;
-        //console.log("totalTokensAfterPurchase",totalTokensAfterPurchase);
-        require(
-            totalTokensAfterPurchase <= INIT_SUPPLY,
-            "Not enough tokens left"
-        );
+    uint totalTokensAfterPurchase = listedToken.tokensBought + TOKENS_PER_MINE;
+    require(totalTokensAfterPurchase <= INIT_SUPPLY, "Not enough tokens left");
 
-        Token minedToken = Token(minedTokenAddress);
-        listedToken.fundingRaised += ethForLiquidity;
-        //console.log("fundingRaised",listedToken.fundingRaised);
-        listedToken.tokensBought = totalTokensAfterPurchase;
-        listedToken.contributions[msg.sender] += msg.value;
+    Token minedToken = Token(minedTokenAddress);
+    listedToken.fundingRaised += ethForLiquidity;
+    listedToken.tokensBought = totalTokensAfterPurchase;
+    listedToken.contributions[msg.sender] += msg.value;
 
-        minedToken.mint(msg.sender, TOKENS_PER_MINE);
+    minedToken.mint(msg.sender, TOKENS_PER_MINE);
 
-        emit TokenMined(minedTokenAddress,msg.sender, TOKENS_PER_MINE);
+    emit TokenMined(minedTokenAddress, msg.sender, TOKENS_PER_MINE);
 
-        if (listedToken.fundingRaised >= MINEDTOKEN_FUNDING_GOAL) {
-            _createLiquidityPool(minedTokenAddress);
-            uint remainingTokens = MAX_SUPPLY - INIT_SUPPLY;
-            minedToken.mint(address(this), remainingTokens);
-            _provideLiquidity(
-                minedTokenAddress,
-                remainingTokens,
-                listedToken.fundingRaised
-            );
-            listedToken.bonded = true;
-        }
+    if (listedToken.fundingRaised >= MINEDTOKEN_FUNDING_GOAL) {
+        _createLiquidityPool(minedTokenAddress);
+        uint remainingTokens = MAX_SUPPLY - INIT_SUPPLY;
+        minedToken.mint(address(this), remainingTokens);
+        _provideLiquidity(minedTokenAddress, remainingTokens, listedToken.fundingRaised);
+        listedToken.bonded = true;
+
+        // ✅ Unlock the token for transfers
+        minedToken.launchToken();
     }
+}
 
     function _createLiquidityPool(
         address memeTokenAddress
@@ -260,6 +247,7 @@ contract MineFun is Ownable {
         require(contribution > 0, "No contribution found");
 
         Token minedToken = Token(minedTokenAddress);
+        minedToken.launchToken();
         uint userTokens = (contribution / PRICE_PER_MINE) * TOKENS_PER_MINE;
 
         minedToken.burn(msg.sender, userTokens);
