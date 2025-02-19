@@ -30,6 +30,39 @@ contract MineFunTest is Test {
         vm.deal(teamWallet, 0 ether); // Ensure team wallet starts empty
     }
 
+    // Helper
+    function simulateBondingProcess(
+        address minedTokenAddress,
+        uint numWallets
+    ) public {
+        uint fundingAmount = 1 ether; // Initial ETH funding for each wallet (adjust as needed)
+
+        // ✅ Ensure bonding hasn't happened yet
+        (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+            minedTokenAddress
+        );
+        require(!bonded, "Token is already bonded");
+
+        for (uint i = 0; i < numWallets; i++) {
+            address wallet = vm.addr(i + 1); // Generates a new random wallet
+            vm.deal(wallet, fundingAmount); // Fund wallet with ETH
+
+            vm.startPrank(wallet);
+            for (uint j = 0; j < 100; j++) {
+                tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress);
+            }
+            vm.stopPrank();
+
+            // ✅ Check if bonding is reached
+            (, , , , , , , , , bonded) = tokenFactory.getMinedTokenDetails(
+                minedTokenAddress
+            );
+            if (bonded) {
+                break; // Stop simulation when bonding happens
+            }
+        }
+    }
+
     /// ✅ **Test that 50% of ETH sent is stored in the team fund**
     function testMineTokenTaxAllocation() public {
         address minedTokenAddress = tokenFactory.createMinedToken{
@@ -66,12 +99,7 @@ contract MineFunTest is Test {
             3 days
         );
 
-        // Mine tokens to reach bonding threshold
-        vm.startPrank(user1);
-        for (uint i = 0; i < 10000; i++) {
-            tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress);
-        }
-        vm.stopPrank();
+        simulateBondingProcess(minedTokenAddress, 500);
 
         // Verify that token bonded
         (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
@@ -155,12 +183,7 @@ contract MineFunTest is Test {
             1 days
         );
 
-        // Mine tokens to reach bonding goal
-        vm.startPrank(user1);
-        for (uint i = 0; i < 10000; i++) {
-            tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress);
-        }
-        vm.stopPrank();
+        simulateBondingProcess(minedTokenAddress, 500);
 
         // Ensure bonding happened
         (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
@@ -208,12 +231,7 @@ contract MineFunTest is Test {
         uint initialLiquidity = IERC20(minedToken).balanceOf(uniswapPair);
         assertEq(initialLiquidity, 0, "Initial liquidity should be zero");
 
-        // Mine tokens to reach bonding goal
-        vm.startPrank(user1);
-        for (uint i = 0; i < 10000; i++) {
-            tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress);
-        }
-        vm.stopPrank();
+        simulateBondingProcess(minedTokenAddress, 500);
 
         // Ensure bonding happened
         (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
