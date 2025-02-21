@@ -58,12 +58,30 @@ contract MineFun is Ownable {
     address public constant USDT = 0xdAa055658ab05B9e1d3c4a4827a88C25F51032B3;
 
     // ✅ EVENTS
-    event MinedTokenCreated(address indexed tokenAddress, address indexed creator, uint bondingDeadline);
-    event TokenMined(address indexed tokenAddress, address indexed miner, uint amount);
-    event LiquidityPoolCreated(address indexed pairAddress, address indexed tokenAddress);
-    event LiquidityProvided(address indexed tokenAddress, uint tokenAmount, uint ethAmount);
-    event ContributionRefunded(address indexed tokenAddress, address indexed contributor, uint amount);
-    
+    event MinedTokenCreated(address indexed tokenAddress,MinedTokenView data);
+    event TokenMined(
+        address indexed tokenAddress,
+        address indexed miner,
+        uint amount
+    );
+    event TokenBonded(
+        address indexed tokenAddress,
+        uint256 fundingRaised
+    );
+    event LiquidityPoolCreated(
+        address indexed pairAddress,
+        address indexed tokenAddress
+    );
+    event LiquidityProvided(
+        address indexed tokenAddress,
+        uint tokenAmount,
+        uint ethAmount
+    );
+    event ContributionRefunded(
+        address indexed tokenAddress,
+        address indexed contributor,
+        uint amount
+    );
 
     constructor(address _teamWallet) Ownable(msg.sender) {
         router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
@@ -106,48 +124,77 @@ contract MineFun is Ownable {
 
         minedTokenAddresses.push(minedTokenAddress);
 
-        emit MinedTokenCreated(minedTokenAddress,msg.sender,newMinedToken.bondingDeadline);
+        // Create a MinedTokenView instance
+        MinedTokenView memory minedTokenView = MinedTokenView({
+            name: newMinedToken.name,
+            symbol: newMinedToken.symbol,
+            description: newMinedToken.description,
+            tokenImageUrl: newMinedToken.tokenImageUrl,
+            fundingRaised: newMinedToken.fundingRaised,
+            tokensBought: newMinedToken.tokensBought,
+            bondingDeadline: newMinedToken.bondingDeadline,
+            tokenAddress: newMinedToken.tokenAddress,
+            creatorAddress: newMinedToken.creatorAddress,
+            bonded: newMinedToken.bonded
+        });
+
+        emit MinedTokenCreated(minedTokenAddress,minedTokenView);
         return minedTokenAddress;
     }
 
     function mineToken(address minedTokenAddress) public payable {
-    MinedToken storage listedToken = addressToMinedTokenMapping[minedTokenAddress];
-    require(listedToken.tokenAddress != address(0), "Token not found");
-    require(!listedToken.bonded, "Token already bonded");
-    require(block.timestamp < listedToken.bondingDeadline, "Bonding period expired");
-    require(
-        IERC20(minedTokenAddress).balanceOf(msg.sender) + TOKENS_PER_MINE <= MAX_PER_WALLET,
-        "Maximum mine per wallet reached"
-    );
-    require(msg.value == PRICE_PER_MINE, "Incorrect ETH amount sent");
+        MinedToken storage listedToken = addressToMinedTokenMapping[
+            minedTokenAddress
+        ];
+        require(listedToken.tokenAddress != address(0), "Token not found");
+        require(!listedToken.bonded, "Token already bonded");
+        require(
+            block.timestamp < listedToken.bondingDeadline,
+            "Bonding period expired"
+        );
+        require(
+            IERC20(minedTokenAddress).balanceOf(msg.sender) + TOKENS_PER_MINE <=
+                MAX_PER_WALLET,
+            "Maximum mine per wallet reached"
+        );
+        require(msg.value == PRICE_PER_MINE, "Incorrect ETH amount sent");
 
-    uint ethForLiquidity = msg.value / 2;
-    uint ethForTeam = msg.value - ethForLiquidity;
-    teamFunds[minedTokenAddress] += ethForTeam;
+        uint ethForLiquidity = msg.value / 2;
+        uint ethForTeam = msg.value - ethForLiquidity;
+        teamFunds[minedTokenAddress] += ethForTeam;
 
-    uint totalTokensAfterPurchase = listedToken.tokensBought + TOKENS_PER_MINE;
-    require(totalTokensAfterPurchase <= INIT_SUPPLY, "Not enough tokens left");
+        uint totalTokensAfterPurchase = listedToken.tokensBought +
+            TOKENS_PER_MINE;
+        require(
+            totalTokensAfterPurchase <= INIT_SUPPLY,
+            "Not enough tokens left"
+        );
 
-    Token minedToken = Token(minedTokenAddress);
-    listedToken.fundingRaised += ethForLiquidity;
-    listedToken.tokensBought = totalTokensAfterPurchase;
-    listedToken.contributions[msg.sender] += msg.value;
+        Token minedToken = Token(minedTokenAddress);
+        listedToken.fundingRaised += ethForLiquidity;
+        listedToken.tokensBought = totalTokensAfterPurchase;
+        listedToken.contributions[msg.sender] += msg.value;
 
-    minedToken.mint(msg.sender, TOKENS_PER_MINE);
+        minedToken.mint(msg.sender, TOKENS_PER_MINE);
 
-    emit TokenMined(minedTokenAddress, msg.sender, TOKENS_PER_MINE);
+        emit TokenMined(minedTokenAddress, msg.sender, TOKENS_PER_MINE);
 
-    if (listedToken.fundingRaised >= MINEDTOKEN_FUNDING_GOAL) {
-        _createLiquidityPool(minedTokenAddress);
-        uint remainingTokens = MAX_SUPPLY - INIT_SUPPLY;
-        minedToken.mint(address(this), remainingTokens);
-        _provideLiquidity(minedTokenAddress, remainingTokens, listedToken.fundingRaised);
-        listedToken.bonded = true;
+        if (listedToken.fundingRaised >= MINEDTOKEN_FUNDING_GOAL) {
+            _createLiquidityPool(minedTokenAddress);
+            uint remainingTokens = MAX_SUPPLY - INIT_SUPPLY;
+            minedToken.mint(address(this), remainingTokens);
+            _provideLiquidity(
+                minedTokenAddress,
+                remainingTokens,
+                listedToken.fundingRaised
+            );
+            listedToken.bonded = true;
+            emit TokenBonded(minedTokenAddress,listedToken.fundingRaised);
 
-        // ✅ Unlock the token for transfers
-        minedToken.launchToken();
+            // ✅ Unlock the token for transfers
+            minedToken.launchToken();
+        }
     }
-}
 
     function _createLiquidityPool(
         address memeTokenAddress
@@ -155,7 +202,7 @@ contract MineFun is Ownable {
         IUniswapV2Factory factory = IUniswapV2Factory(UNISWAP_V2_FACTORY);
 
         address pair = factory.createPair(memeTokenAddress, router.WETH());
-        emit LiquidityPoolCreated(pair,memeTokenAddress);
+        emit LiquidityPoolCreated(pair, memeTokenAddress);
         return pair;
     }
 
@@ -176,7 +223,7 @@ contract MineFun is Ownable {
             block.timestamp
         );
 
-        emit LiquidityProvided(minedTokenAddress,tokenAmount,ethAmount);
+        emit LiquidityProvided(minedTokenAddress, tokenAmount, ethAmount);
         return liquidity;
     }
 
@@ -262,7 +309,7 @@ contract MineFun is Ownable {
 
         payable(msg.sender).transfer(refundAmount);
 
-        emit ContributionRefunded(minedTokenAddress,msg.sender,refundAmount);
+        emit ContributionRefunded(minedTokenAddress, msg.sender, refundAmount);
     }
 
     function getMinedTokenDetails(
