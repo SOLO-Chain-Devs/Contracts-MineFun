@@ -8,12 +8,13 @@ import "forge-std/Test.sol";
 contract Token is ERC20, Ownable {
     bool launched;
 
+    event Launched(uint256 timestamp);
+
     constructor(
         string memory name,
         string memory symbol,
         uint initialMintValue
     ) ERC20(name, symbol) Ownable(msg.sender) {
-        // transferOwnership(msg.sender);
         _mint(msg.sender, initialMintValue);
     }
 
@@ -46,5 +47,6 @@ contract Token is ERC20, Ownable {
 
     function launchToken() public onlyOwner {
         launched = true;
+        emit Launched(block.timestamp);
     }
 }
