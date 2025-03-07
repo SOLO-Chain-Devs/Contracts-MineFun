@@ -3,15 +3,15 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/MineFunImplementation.sol";
-import {MineFunProxy} from "../src/MineFunProxy.sol"; 
-import {Token} from "../src/Token.sol";
+import "../../src/upgradeable/MineFun.sol";
+import {Token} from "../../src/Token.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract MineFunTest is Test {
-    MineFunImplementation tokenFactory;
+    MineFun tokenFactory;
 
     address deployer;
     address teamWallet = vm.addr(100); // Simulated team wallet
@@ -19,81 +19,73 @@ contract MineFunTest is Test {
     address user2 = vm.addr(2);
 
     function setUp() public {
-    deployer = msg.sender;
-    string memory rpcUrl = vm.envString("RPC_URL");
+        deployer = msg.sender;
+        string memory rpcUrl = vm.envString("RPC_URL");
 
-    vm.createSelectFork(rpcUrl);
-    vm.prank(deployer);
+        vm.createSelectFork(rpcUrl);
+        vm.prank(deployer);
 
-    // Deploy the implementation contract
-    MineFunImplementation implementation = new MineFunImplementation();
-
-    // Deploy the proxy and point it to the implementation
-    MineFunProxy proxy = new MineFunProxy(address(implementation), "");
-
-    // Cast proxy address as MineFunImplementation to interact with it
-    tokenFactory = MineFunImplementation(address(proxy));
-
-    // ✅ Explicitly call initialize() on the proxy
-    vm.prank(deployer);
-    tokenFactory.initialize(teamWallet);
-
-   
-
-    // Fund users for testing
-    vm.deal(user1, 100 ether);
-    vm.deal(user2, 100 ether);
-    vm.deal(teamWallet, 0 ether); // Ensure team wallet starts empty
-}
-
-   function simulateBondingProcess(
-    address minedTokenAddress
-) public {
-    uint fundingAmount = 1 ether; // Initial ETH funding for each wallet
-    uint tokensPerMine = 50_000 ether;
-    uint maxTokensPerWallet = 10_000_000 ether;
-    uint totalTokensBought = 0;
-
-    // ✅ Ensure bonding hasn't happened yet
-    (, , , , , uint tokensBought, , , , bool bonded) = tokenFactory.getMinedTokenDetails(
-        minedTokenAddress
-    );
-    require(!bonded, "Token is already bonded");
-
-    uint walletIndex = 1;
-
-    while (!bonded) {
-        address wallet = vm.addr(walletIndex); // Get a new wallet
-        vm.deal(wallet, fundingAmount); // Fund wallet with ETH
-        walletIndex++;
-
-        uint walletTokenBalance = IERC20(minedTokenAddress).balanceOf(wallet);
-
-        vm.startPrank(wallet);
-
-        while (
-            walletTokenBalance + tokensPerMine <= maxTokensPerWallet &&
-            totalTokensBought + tokensPerMine <= 500_000_000 ether // Adjust for the actual max supply
-        ) {
-            tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress);
-            walletTokenBalance += tokensPerMine;
-            totalTokensBought += tokensPerMine;
-
-            // Check if bonding is reached
-            (, , , , , tokensBought, , , , bonded) = tokenFactory.getMinedTokenDetails(
-                minedTokenAddress
-            );
-
-            if (bonded) {
-                break;
-            }
-        }
-
-        vm.stopPrank();
+        MineFun implementation = new MineFun();
+        bytes memory initData = abi.encodeWithSelector(
+            MineFun.initialize.selector,
+            teamWallet
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            initData
+        );
+        tokenFactory = MineFun(address(proxy));
+        // Fund users for testing
+        vm.deal(user1, 100 ether);
+        vm.deal(user2, 100 ether);
+        vm.deal(teamWallet, 0 ether); // Ensure team wallet starts empty
     }
-}
 
-    /// ✅ **Test that 50% of ETH sent is stored in the team fund**
+    function simulateBondingProcess(address minedTokenAddress) public {
+        uint fundingAmount = 1 ether; // Initial ETH funding for each wallet
+        uint tokensPerMine = 50_000 ether;
+        uint maxTokensPerWallet = 10_000_000 ether;
+        uint totalTokensBought = 0;
+
+        // Ensure bonding hasn't happened yet
+        (, , , , , uint tokensBought, , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+            minedTokenAddress
+        );
+        require(!bonded, "Token is already bonded");
+
+        uint walletIndex = 1;
+
+        while (!bonded) {
+            address wallet = vm.addr(walletIndex); // Get a new wallet
+            vm.deal(wallet, fundingAmount); // Fund wallet with ETH
+            walletIndex++;
+
+            uint walletTokenBalance = IERC20(minedTokenAddress).balanceOf(wallet);
+
+            vm.startPrank(wallet);
+
+            while (
+                walletTokenBalance + tokensPerMine <= maxTokensPerWallet &&
+                totalTokensBought + tokensPerMine <= 500_000_000 ether // Adjust for the actual max supply
+            ) {
+                tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress);
+                walletTokenBalance += tokensPerMine;
+                totalTokensBought += tokensPerMine;
+
+                // Check if bonding is reached
+                (, , , , , tokensBought, , , , bonded) = tokenFactory.getMinedTokenDetails(
+                    minedTokenAddress
+                );
+
+                if (bonded) {
+                    break;
+                }
+            }
+
+            vm.stopPrank();
+        }
+    }
+
     function testMineTokenTaxAllocation() public {
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
@@ -117,7 +109,6 @@ contract MineFunTest is Test {
         );
     }
 
-    /// ✅ **Test that the team wallet can retrieve funds only after bonding**
     function testRetrieveTeamFundsAfterBonding() public {
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
@@ -146,7 +137,6 @@ contract MineFunTest is Test {
         assertEq(teamFundBalanceAfter, 0, "Team funds should be withdrawn");
     }
 
-    /// ✅ **Test that the team wallet cannot retrieve funds if the token fails to bond**
     function testTeamFundRetrievalFailsIfNotBonded() public {
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
@@ -168,7 +158,6 @@ contract MineFunTest is Test {
         vm.stopPrank();
     }
 
-    /// ✅ **Test that refund correctly includes the team's portion when bonding fails**
     function testRefundIncludesTeamPortion() public {
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
@@ -201,7 +190,6 @@ contract MineFunTest is Test {
         );
     }
 
-    /// ✅ **Test that refund fails after bonding is successful**
     function testRefundFailsAfterBonding() public {
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
@@ -229,7 +217,7 @@ contract MineFunTest is Test {
         tokenFactory.refundContributors(minedTokenAddress);
         vm.stopPrank();
     }
-    /// ✅ **Test that liquidity is added to Uniswap V2 after bonding**
+
     function testLiquidityAddedAfterBonding() public {
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
@@ -245,13 +233,11 @@ contract MineFunTest is Test {
 
         // Fetch Uniswap V2 factory address from your contract
         address uniswapFactory = tokenFactory.UNISWAP_V2_FACTORY();
-       address routerAddress = address(tokenFactory.router());
-       /* console.log("uniswapFactory",uniswapFactory);
-       console.log("routerAddress",routerAddress); */
+        address routerAddress = address(tokenFactory.router());
 
         address WETH = IUniswapV2Router01(routerAddress).WETH();
 
-       // Fetch the Uniswap V2 Pair (minedToken <> WETH)
+        // Fetch the Uniswap V2 Pair (minedToken <> WETH)
         address uniswapPair = IUniswapV2Factory(uniswapFactory).getPair(
             address(minedToken),
             WETH
