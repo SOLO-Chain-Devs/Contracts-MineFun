@@ -23,7 +23,7 @@ contract MineFunTest is Test {
         string memory rpcUrl = vm.envString("RPC_URL");
 
         vm.createSelectFork(rpcUrl);
-        vm.prank(deployer);
+        vm.startPrank(deployer);
 
         MineFun implementation = new MineFun();
         bytes memory initData = abi.encodeWithSelector(
@@ -35,6 +35,7 @@ contract MineFunTest is Test {
             initData
         );
         tokenFactory = MineFun(address(proxy));
+        vm.stopPrank();
         // Fund users for testing
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
