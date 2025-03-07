@@ -10,6 +10,9 @@ contract DeployProxy is Script {
     function run() external {
         // Load the deployer's private key from ENV
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address uniswap_v2_router_ca = vm.envAddress("UNISWAP_V2_ROUTER_CA");
+        address uniswap_v2_factory_ca = vm.envAddress("UNISWAP_V2_FACTORY_CA"); 
+        address usdt_ca = vm.envAddress("USDT_CA");
         
         // Start Broadcasting Transactions
         vm.startBroadcast(deployerPrivateKey);
@@ -29,7 +32,10 @@ contract DeployProxy is Script {
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
             MineFun.initialize.selector,
-            teamWallet
+            teamWallet,
+            uniswap_v2_router_ca,
+            uniswap_v2_factory_ca,
+            usdt_ca
         );
         
         // Deploy TransparentUpgradeableProxy with deployer as admin

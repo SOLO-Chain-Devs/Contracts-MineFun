@@ -21,6 +21,9 @@ contract MineFunTest is Test {
     function setUp() public {
         deployer = msg.sender;
         string memory rpcUrl = vm.envString("RPC_URL");
+        address uniswap_v2_router_ca = vm.envAddress("UNISWAP_V2_ROUTER_CA");
+        address uniswap_v2_factory_ca = vm.envAddress("UNISWAP_V2_FACTORY_CA"); 
+        address usdt_ca = vm.envAddress("USDT_CA");
 
         vm.createSelectFork(rpcUrl);
         vm.startPrank(deployer);
@@ -28,7 +31,10 @@ contract MineFunTest is Test {
         MineFun implementation = new MineFun();
         bytes memory initData = abi.encodeWithSelector(
             MineFun.initialize.selector,
-            teamWallet
+            teamWallet,
+            uniswap_v2_router_ca,
+            uniswap_v2_factory_ca,
+            usdt_ca
         );
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(implementation),
