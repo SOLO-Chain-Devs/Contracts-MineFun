@@ -6,9 +6,11 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
 import "forge-std/Test.sol";
 
-contract MineFun is Ownable {
+contract MineFunImplementation is Ownable,Initializable {
     IUniswapV2Router01 public immutable router;
     address public immutable teamWallet; // Team wallet address
     mapping(address => uint) public teamFunds; // Tracks ETH allocated for team wallet per token
@@ -83,10 +85,11 @@ contract MineFun is Ownable {
         uint amount
     );
 
-    constructor(address _teamWallet) Ownable(msg.sender) {
-        router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
+    function initialize(address _teamWallet) public initializer {
         require(_teamWallet != address(0), "Invalid team wallet");
         teamWallet = _teamWallet;
+        router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
+        _transferOwnership(msg.sender);
     }
 
     function createMinedToken(
