@@ -18,13 +18,13 @@ contract MineFun is MineFunView {
      * @dev Initializes the contract with required parameters
      * @param _teamWallet Team wallet address for receiving funds
      */
-    function initialize(address _teamWallet) public initializer {
+    function initialize(address _teamWallet, address _uniswapV2Router, address _uniswapV2Factory, address _usdt) public initializer {
         require(_teamWallet != address(0), "Invalid team wallet");
         
         teamWallet = _teamWallet;
-        UNISWAP_V2_ROUTER = 0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70;
-        UNISWAP_V2_FACTORY = 0xB2c5B17bF7A655B0FC3Eb44038E8A65EEa904407;
-        USDT = 0xdAa055658ab05B9e1d3c4a4827a88C25F51032B3;
+        UNISWAP_V2_ROUTER = _uniswapV2Router;
+        UNISWAP_V2_FACTORY = _uniswapV2Factory;
+        USDT = _usdt;
         router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
         
         __Ownable_init(msg.sender);
