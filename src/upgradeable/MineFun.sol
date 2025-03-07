@@ -471,6 +471,15 @@ contract MineFun is
     }
 
     /**
+     * @dev Updates the team wallet address
+     * @param _newTeamWallet New team wallet address
+     */
+    function updateTeamWallet(address _newTeamWallet) external onlyOwner {
+        require(_newTeamWallet != address(0), "Invalid team wallet address");
+        teamWallet = _newTeamWallet;
+    }
+
+    /**
      * @dev Function that authorizes an upgrade to a new implementation
      * @param newImplementation Address of the new implementation
      */

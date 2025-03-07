@@ -341,5 +341,29 @@ contract MineFunTest is Test {
         tokenFactory.updateUSDTAddress(newUSDT);
 
         assert(tokenFactory.USDT()==newUSDT);
+
+        vm.prank(user1);
+        vm.expectRevert();
+        tokenFactory.updateUSDTAddress(newUSDT);
+
+    }
+    
+    function testUpdateTeamWallet() public {
+        address newTeamWallet = vm.addr(200); // New team wallet address
+
+        // Ensure the original team wallet is set
+        assertEq(tokenFactory.teamWallet(), teamWallet);
+
+        // Update team wallet
+        vm.prank(deployer);
+        tokenFactory.updateTeamWallet(newTeamWallet);
+
+        // Verify team wallet was updated
+        assertEq(tokenFactory.teamWallet(), newTeamWallet);
+
+        // Ensure non-owners cannot update team wallet
+        vm.prank(user1);
+        vm.expectRevert();
+        tokenFactory.updateTeamWallet(vm.addr(300));
     }
 }
