@@ -11,9 +11,13 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "forge-std/Test.sol";
 
-contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradeable{
-    IUniswapV2Router01 public  router;
-    address public  teamWallet; // Team wallet address
+contract MineFunImplementation is
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    IUniswapV2Router01 public router;
+    address public teamWallet; // Team wallet address
     mapping(address => uint) public teamFunds; // Tracks ETH allocated for team wallet per token
     struct MinedToken {
         string name;
@@ -53,22 +57,19 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
     uint constant INIT_SUPPLY = (50 * MAX_SUPPLY) / 100; // 500M tokens
     uint constant MAX_PER_WALLET = 10_000_000 ether;
 
-    address public  UNISWAP_V2_FACTORY ;
-    address public  UNISWAP_V2_ROUTER ;
+    address public UNISWAP_V2_FACTORY;
+    address public UNISWAP_V2_ROUTER;
 
-    address public  USDT;
+    address public USDT;
 
     // ✅ EVENTS
-    event MinedTokenCreated(address indexed tokenAddress,MinedTokenView data);
+    event MinedTokenCreated(address indexed tokenAddress, MinedTokenView data);
     event TokenMined(
         address indexed tokenAddress,
         address indexed miner,
         uint amount
     );
-    event TokenBonded(
-        address indexed tokenAddress,
-        uint256 fundingRaised
-    );
+    event TokenBonded(address indexed tokenAddress, uint256 fundingRaised);
     event LiquidityPoolCreated(
         address indexed pairAddress,
         address indexed tokenAddress
@@ -87,10 +88,8 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
     function initialize(address _teamWallet) public initializer {
         require(_teamWallet != address(0), "Invalid team wallet");
         teamWallet = _teamWallet;
-        UNISWAP_V2_ROUTER =
-        0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70;
-        UNISWAP_V2_FACTORY =
-        0xB2c5B17bF7A655B0FC3Eb44038E8A65EEa904407;
+        UNISWAP_V2_ROUTER = 0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70;
+        UNISWAP_V2_FACTORY = 0xB2c5B17bF7A655B0FC3Eb44038E8A65EEa904407;
         USDT = 0xdAa055658ab05B9e1d3c4a4827a88C25F51032B3;
         router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
         __Ownable_init(msg.sender);
@@ -113,8 +112,31 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
             "Bonding time must be between 1 and 7 days"
         );
 
-        Token newToken = new Token(name, symbol, INIT_SUPPLY);
-        address minedTokenAddress = address(newToken);
+        // ✅ Generate a unique salt
+        bytes32 salt = keccak256(abi.encodePacked(name, symbol, msg.sender));
+
+        // ✅ Get the contract bytecode
+        bytes memory bytecode = abi.encodePacked(
+            type(Token).creationCode,
+            abi.encode(name, symbol, INIT_SUPPLY)
+        );
+
+        address minedTokenAddress;
+
+        // ✅ Deploy using CREATE2
+        assembly {
+            minedTokenAddress := create2(
+                0,
+                add(bytecode, 32),
+                mload(bytecode),
+                salt
+            )
+            if iszero(extcodesize(minedTokenAddress)) {
+                revert(0, 0)
+            }
+        }
+
+        require(minedTokenAddress != address(0), "CREATE2 failed");
 
         MinedToken storage newMinedToken = addressToMinedTokenMapping[
             minedTokenAddress
@@ -132,7 +154,7 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
 
         minedTokenAddresses.push(minedTokenAddress);
 
-        // Create a MinedTokenView instance
+        // ✅ Create a MinedTokenView instance
         MinedTokenView memory minedTokenView = MinedTokenView({
             name: newMinedToken.name,
             symbol: newMinedToken.symbol,
@@ -146,7 +168,7 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
             bonded: newMinedToken.bonded
         });
 
-        emit MinedTokenCreated(minedTokenAddress,minedTokenView);
+        emit MinedTokenCreated(minedTokenAddress, minedTokenView);
         return minedTokenAddress;
     }
 
@@ -160,11 +182,11 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
             block.timestamp < listedToken.bondingDeadline,
             "Bonding period expired"
         );
-         require(
+        require(
             IERC20(minedTokenAddress).balanceOf(msg.sender) + TOKENS_PER_MINE <=
                 MAX_PER_WALLET,
             "Maximum mine per wallet reached"
-        ); 
+        );
         require(msg.value == PRICE_PER_MINE, "Incorrect ETH amount sent");
 
         uint ethForLiquidity = msg.value / 2;
@@ -197,7 +219,7 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
                 listedToken.fundingRaised
             );
             listedToken.bonded = true;
-            emit TokenBonded(minedTokenAddress,listedToken.fundingRaised);
+            emit TokenBonded(minedTokenAddress, listedToken.fundingRaised);
 
             // ✅ Unlock the token for transfers
             minedToken.launchToken();
@@ -277,15 +299,6 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
                 .contributions[contributors[i]];
         }
         return contributions;
-    }
-
-    function getUSDValue(uint256 _amount) public view returns (uint) {
-        address[] memory path = new address[](2);
-        path[0] = router.WETH();
-        path[1] = USDT;
-
-        uint[] memory amountsOut = router.getAmountsOut(_amount, path);
-        return amountsOut[1] / 1e6;
     }
 
     function refundContributors(address minedTokenAddress) public {
@@ -370,17 +383,18 @@ contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradea
         payable(teamWallet).transfer(amount);
     }
 
-    function updateUSDTAddress(address _newAddress) external onlyOwner(){
+    function updateUSDTAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0));
         USDT = _newAddress;
     }
-    function updateRouterAddress(address _newAddress) external onlyOwner(){
+    function updateRouterAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0));
         UNISWAP_V2_ROUTER = _newAddress;
         router = IUniswapV2Router01(_newAddress);
         UNISWAP_V2_FACTORY = router.factory();
     }
-    
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 }
