@@ -6,13 +6,14 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "forge-std/Test.sol";
 
-contract MineFunImplementation is Ownable,Initializable {
-    IUniswapV2Router01 public immutable router;
-    address public immutable teamWallet; // Team wallet address
+contract MineFunImplementation is Initializable,OwnableUpgradeable ,UUPSUpgradeable{
+    IUniswapV2Router01 public  router;
+    address public  teamWallet; // Team wallet address
     mapping(address => uint) public teamFunds; // Tracks ETH allocated for team wallet per token
     struct MinedToken {
         string name;
@@ -52,12 +53,10 @@ contract MineFunImplementation is Ownable,Initializable {
     uint constant INIT_SUPPLY = (50 * MAX_SUPPLY) / 100; // 500M tokens
     uint constant MAX_PER_WALLET = 10_000_000 ether;
 
-    address public constant UNISWAP_V2_FACTORY =
-        0xB2c5B17bF7A655B0FC3Eb44038E8A65EEa904407;
-    address public constant UNISWAP_V2_ROUTER =
-        0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70;
+    address public  UNISWAP_V2_FACTORY ;
+    address public  UNISWAP_V2_ROUTER ;
 
-    address public constant USDT = 0xdAa055658ab05B9e1d3c4a4827a88C25F51032B3;
+    address public  USDT;
 
     // ✅ EVENTS
     event MinedTokenCreated(address indexed tokenAddress,MinedTokenView data);
@@ -88,8 +87,14 @@ contract MineFunImplementation is Ownable,Initializable {
     function initialize(address _teamWallet) public initializer {
         require(_teamWallet != address(0), "Invalid team wallet");
         teamWallet = _teamWallet;
+        UNISWAP_V2_ROUTER =
+        0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70;
+        UNISWAP_V2_FACTORY =
+        0xB2c5B17bF7A655B0FC3Eb44038E8A65EEa904407;
+        USDT = 0xdAa055658ab05B9e1d3c4a4827a88C25F51032B3;
         router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
-        _transferOwnership(msg.sender);
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
     }
 
     function createMinedToken(
@@ -155,11 +160,11 @@ contract MineFunImplementation is Ownable,Initializable {
             block.timestamp < listedToken.bondingDeadline,
             "Bonding period expired"
         );
-        require(
+         require(
             IERC20(minedTokenAddress).balanceOf(msg.sender) + TOKENS_PER_MINE <=
                 MAX_PER_WALLET,
             "Maximum mine per wallet reached"
-        );
+        ); 
         require(msg.value == PRICE_PER_MINE, "Incorrect ETH amount sent");
 
         uint ethForLiquidity = msg.value / 2;
@@ -364,4 +369,18 @@ contract MineFunImplementation is Ownable,Initializable {
         teamFunds[minedTokenAddress] = 0;
         payable(teamWallet).transfer(amount);
     }
+
+    function updateUSDTAddress(address _newAddress) external onlyOwner(){
+        require(_newAddress != address(0));
+        USDT = _newAddress;
+    }
+    function updateRouterAddress(address _newAddress) external onlyOwner(){
+        require(_newAddress != address(0));
+        UNISWAP_V2_ROUTER = _newAddress;
+        router = IUniswapV2Router01(_newAddress);
+        UNISWAP_V2_FACTORY = router.factory();
+    }
+    
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
