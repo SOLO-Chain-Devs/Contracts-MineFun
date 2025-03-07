@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./Token.sol";
+import "../Token.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "forge-std/Test.sol";
-
-contract MineFunImplementation is
+/**
+ * @title MineFun
+ * @dev Implementation contract for the MineFun platform
+ * @notice This contract allows users to create and mine tokens with automated liquidity pool creation
+ */
+contract MineFun is
     Initializable,
     OwnableUpgradeable,
     UUPSUpgradeable
@@ -59,7 +62,6 @@ contract MineFunImplementation is
 
     address public UNISWAP_V2_FACTORY;
     address public UNISWAP_V2_ROUTER;
-
     address public USDT;
 
     // ✅ EVENTS
@@ -85,17 +87,37 @@ contract MineFunImplementation is
         uint amount
     );
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initializes the contract with required parameters
+     * @param _teamWallet Team wallet address for receiving funds
+     */
     function initialize(address _teamWallet) public initializer {
         require(_teamWallet != address(0), "Invalid team wallet");
+        
         teamWallet = _teamWallet;
         UNISWAP_V2_ROUTER = 0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70;
         UNISWAP_V2_FACTORY = 0xB2c5B17bF7A655B0FC3Eb44038E8A65EEa904407;
         USDT = 0xdAa055658ab05B9e1d3c4a4827a88C25F51032B3;
         router = IUniswapV2Router01(UNISWAP_V2_ROUTER);
+        
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
     }
 
+    /**
+     * @dev Creates a new mined token with the specified parameters
+     * @param name Token name
+     * @param symbol Token symbol
+     * @param imageUrl URL to token image
+     * @param description Token description
+     * @param bondingTime Duration of bonding period in seconds
+     * @return Address of the newly created token
+     */
     function createMinedToken(
         string memory name,
         string memory symbol,
@@ -172,6 +194,10 @@ contract MineFunImplementation is
         return minedTokenAddress;
     }
 
+    /**
+     * @dev Mine tokens by contributing ETH
+     * @param minedTokenAddress Address of the token to mine
+     */
     function mineToken(address minedTokenAddress) public payable {
         MinedToken storage listedToken = addressToMinedTokenMapping[
             minedTokenAddress
@@ -226,6 +252,11 @@ contract MineFunImplementation is
         }
     }
 
+    /**
+     * @dev Creates a liquidity pool for a mined token
+     * @param memeTokenAddress Address of the token
+     * @return Address of the created pair
+     */
     function _createLiquidityPool(
         address memeTokenAddress
     ) internal returns (address) {
@@ -236,6 +267,13 @@ contract MineFunImplementation is
         return pair;
     }
 
+    /**
+     * @dev Provides liquidity to a token's pool
+     * @param minedTokenAddress Address of the token
+     * @param tokenAmount Amount of tokens to provide
+     * @param ethAmount Amount of ETH to provide
+     * @return Amount of liquidity tokens received
+     */
     function _provideLiquidity(
         address minedTokenAddress,
         uint tokenAmount,
@@ -257,6 +295,10 @@ contract MineFunImplementation is
         return liquidity;
     }
 
+    /**
+     * @dev Gets all mined tokens
+     * @return Array of MinedTokenView structs
+     */
     function getAllMinedTokens() public view returns (MinedTokenView[] memory) {
         MinedTokenView[] memory allTokens = new MinedTokenView[](
             minedTokenAddresses.length
@@ -281,6 +323,12 @@ contract MineFunImplementation is
         return allTokens;
     }
 
+    /**
+     * @dev Gets contribution amount for a user for a specific token
+     * @param minedTokenAddress Address of the token
+     * @param user Address of the user
+     * @return Contribution amount
+     */
     function getContributionsForToken(
         address minedTokenAddress,
         address user
@@ -289,6 +337,12 @@ contract MineFunImplementation is
             addressToMinedTokenMapping[minedTokenAddress].contributions[user];
     }
 
+    /**
+     * @dev Gets contributions for multiple users for a token
+     * @param minedTokenAddress Address of the token
+     * @param contributors Array of contributor addresses
+     * @return Array of contribution amounts
+     */
     function getAllContributionsForToken(
         address minedTokenAddress,
         address[] memory contributors
@@ -301,6 +355,10 @@ contract MineFunImplementation is
         return contributions;
     }
 
+    /**
+     * @dev Refunds contributors if bonding deadline is passed and token is not bonded
+     * @param minedTokenAddress Address of the token
+     */
     function refundContributors(address minedTokenAddress) public {
         MinedToken storage listedToken = addressToMinedTokenMapping[
             minedTokenAddress
@@ -324,7 +382,7 @@ contract MineFunImplementation is
         uint refundAmount = contribution;
         uint teamFundForToken = teamFunds[minedTokenAddress];
         if (teamFundForToken > 0) {
-            teamFunds[minedTokenAddress] -= contribution / 2; // Remove team’s portion too
+            teamFunds[minedTokenAddress] -= contribution / 2; // Remove team's portion too
             refundAmount = contribution;
         }
 
@@ -333,6 +391,11 @@ contract MineFunImplementation is
         emit ContributionRefunded(minedTokenAddress, msg.sender, refundAmount);
     }
 
+    /**
+     * @dev Gets detailed information about a mined token
+     * @param minedTokenAddress Address of the token
+     * returns Tuple containing all token details
+     */
     function getMinedTokenDetails(
         address minedTokenAddress
     )
@@ -369,6 +432,10 @@ contract MineFunImplementation is
         );
     }
 
+    /**
+     * @dev Allows team to retrieve accumulated funds after token is bonded
+     * @param minedTokenAddress Address of the token
+     */
     function retrieveTeamFunds(address minedTokenAddress) public {
         MinedToken storage listedToken = addressToMinedTokenMapping[
             minedTokenAddress
@@ -383,18 +450,34 @@ contract MineFunImplementation is
         payable(teamWallet).transfer(amount);
     }
 
+    /**
+     * @dev Updates the USDT address
+     * @param _newAddress New USDT address
+     */
     function updateUSDTAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0));
+        require(_newAddress != address(0), "Invalid address");
         USDT = _newAddress;
     }
+
+    /**
+     * @dev Updates the router address and related factory
+     * @param _newAddress New router address
+     */
     function updateRouterAddress(address _newAddress) external onlyOwner {
-        require(_newAddress != address(0));
+        require(_newAddress != address(0), "Invalid address");
         UNISWAP_V2_ROUTER = _newAddress;
         router = IUniswapV2Router01(_newAddress);
         UNISWAP_V2_FACTORY = router.factory();
     }
 
+    /**
+     * @dev Function that authorizes an upgrade to a new implementation
+     * @param newImplementation Address of the new implementation
+     */
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
+
+    // Gap for future storage variables in upgrades
+    uint256[50] private __gap;
 }
