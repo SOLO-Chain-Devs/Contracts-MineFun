@@ -101,7 +101,10 @@ contract MineFunTest is Test {
             "TEST",
             "img://test.png",
             "This is a test token",
-            3 days
+            3 days,
+            false,
+            0,
+            0
         );
 
         vm.startPrank(user1);
@@ -124,7 +127,10 @@ contract MineFunTest is Test {
             "TEST",
             "img://test.png",
             "This is a test token",
-            3 days
+            3 days,
+            false,
+            0,
+            0
         );
 
         simulateBondingProcess(minedTokenAddress);
@@ -152,7 +158,10 @@ contract MineFunTest is Test {
             "TEST",
             "img://test.png",
             "This is a test token",
-            3 days
+            3 days,
+            false,
+            0,
+            0
         );
 
         vm.startPrank(user1);
@@ -173,7 +182,11 @@ contract MineFunTest is Test {
             "TEST",
             "img://test.png",
             "This is a test token",
-            1 days
+            1 days,
+            false,
+            0,
+            0
+
         );
 
         vm.startPrank(user1);
@@ -205,7 +218,11 @@ contract MineFunTest is Test {
             "TEST",
             "img://test.png",
             "This is a test token",
-            1 days
+            1 days,
+            false,
+            0,
+            0
+
         );
 
         simulateBondingProcess(minedTokenAddress);
@@ -233,7 +250,11 @@ contract MineFunTest is Test {
             "TEST",
             "img://test.png",
             "This is a test token",
-            3 days
+            3 days,
+            false,
+            0,
+            0
+
         );
 
         Token minedToken = Token(minedTokenAddress);
@@ -291,7 +312,7 @@ contract MineFunTest is Test {
         vm.prank(user1);
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
-        }(name, symbol, tokenImageUrl, description, bondingDeadline);
+        }(name, symbol, tokenImageUrl, description, bondingDeadline, false, 0, 0);
 
         // Fetch token details
         (

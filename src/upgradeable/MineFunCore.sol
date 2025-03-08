@@ -26,7 +26,10 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         string memory symbol,
         string memory imageUrl,
         string memory description,
-        uint bondingTime
+        uint bondingTime,
+        bool proxyCreation,
+        uint timestampOverride,
+        uint blockNumberOverride
     ) public payable override returns (address) {
         require(
             msg.value >= MINEDTOKEN_CREATION_FEE,
@@ -37,8 +40,27 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
             "Bonding time must be between 1 and 7 days"
         );
 
+        uint timestamp;
+        uint blockNum;
+        
+        if (proxyCreation) {
+            require(timestampOverride > 0, "Invalid timestamp");
+            require(blockNumberOverride > 0, "Invalid block number");
+            timestamp = timestampOverride;
+            blockNum = blockNumberOverride;
+        } else {
+            timestamp = block.timestamp;
+            blockNum = block.number;
+        }
+    
         // Generate a unique salt
-        bytes32 salt = keccak256(abi.encodePacked(name, symbol, msg.sender));
+        bytes32 salt = keccak256(abi.encodePacked(
+            name, 
+            symbol, 
+            msg.sender,
+            timestamp,  
+            blockNum    
+        ));
 
         // Get the contract bytecode
         bytes memory bytecode = abi.encodePacked(

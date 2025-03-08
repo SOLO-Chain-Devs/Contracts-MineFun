@@ -48,7 +48,10 @@ interface IMineFun {
         string memory symbol,
         string memory imageUrl,
         string memory description,
-        uint bondingTime
+        uint bondingTime,
+        bool proxyCreation,
+        uint timestampOverride,
+        uint blockNumberOverride
     ) external payable returns (address);
 
     function mineToken(address minedTokenAddress) external payable;
