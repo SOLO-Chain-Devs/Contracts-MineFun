@@ -111,12 +111,12 @@ script/
 
 4. Deploy to Caldera Solo testnet:
    ```
-   forge script script/DeployProxy.s.sol --rpc-url $SOLO_TESTNET_RPC_URL --broadcast
+   forge script script/DeployProxy.s.sol:DeployProxy --rpc-url $SOLO_TESTNET_RPC_URL --broadcast
    ```
 
 5. For verification on Blockscout (optional):
    ```
-   forge script script/DeployProxy.s.sol --rpc-url $SOLO_TESTNET_RPC_URL --broadcast --verify --verifier blockscout --verifier-url $SOLO_TESTNET_BLOCKSCOUT_API_URL --chain-id 8884571
+   forge script script/DeployProxy.s.sol:DeployProxy --rpc-url $SOLO_TESTNET_RPC_URL --broadcast --verify --verifier blockscout --verifier-url $SOLO_TESTNET_BLOCKSCOUT_API_URL --chain-id 8884571
    ```
 
 ## Interacting with the Platform
