@@ -9,23 +9,21 @@ import "./IMineFun.sol";
 
 /**
  * @title MineFunCore
- * @dev Core business logic for the MineFun platform
+ * @dev Core business logic for the /MineFun platform
  */
 abstract contract MineFunCore is MineFunAdmin, IMineFun {
     /**
      * @dev Creates a new mined token with the specified parameters
      * @param name Token name
      * @param symbol Token symbol
-     * @param imageUrl URL to token image
-     * @param description Token description
+     * @param CIDLink Token CID Link
      * @param bondingTime Duration of bonding period in seconds
      * @return Address of the newly created token
      */
     function createMinedToken(
         string memory name,
         string memory symbol,
-        string memory imageUrl,
-        string memory description,
+        string memory CIDLink,
         uint bondingTime,
         bool proxyCreation,
         uint timestampOverride,
@@ -90,23 +88,20 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         ];
         newMinedToken.name = name;
         newMinedToken.symbol = symbol;
-        newMinedToken.description = description;
-        newMinedToken.tokenImageUrl = imageUrl;
+        newMinedToken.metadataCID = CIDLink; 
         newMinedToken.fundingRaised = 0;
         newMinedToken.tokensBought = 0;
         newMinedToken.bondingDeadline = block.timestamp + bondingTime;
         newMinedToken.tokenAddress = minedTokenAddress;
         newMinedToken.creatorAddress = msg.sender;
         newMinedToken.bonded = false;
-
         minedTokenAddresses.push(minedTokenAddress);
 
         // Create a MinedTokenView instance
         MinedTokenView memory minedTokenView = MinedTokenView({
             name: newMinedToken.name,
             symbol: newMinedToken.symbol,
-            description: newMinedToken.description,
-            tokenImageUrl: newMinedToken.tokenImageUrl,
+            metadataCID: newMinedToken.metadataCID,
             fundingRaised: newMinedToken.fundingRaised,
             tokensBought: newMinedToken.tokensBought,
             bondingDeadline: newMinedToken.bondingDeadline,

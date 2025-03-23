@@ -17,8 +17,7 @@ abstract contract MineFunStorage is Initializable {
     struct MinedToken {
         string name;
         string symbol;
-        string description;
-        string tokenImageUrl;
+        string metadataCID;
         uint fundingRaised;
         uint tokensBought;
         uint bondingDeadline;
