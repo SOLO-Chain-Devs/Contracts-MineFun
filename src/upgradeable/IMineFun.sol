@@ -9,8 +9,7 @@ interface IMineFun {
     struct MinedTokenView {
         string name;
         string symbol;
-        string description;
-        string tokenImageUrl;
+        string metadataCID;
         uint fundingRaised;
         uint tokensBought;
         uint bondingDeadline;
@@ -46,8 +45,7 @@ interface IMineFun {
     function createMinedToken(
         string memory name,
         string memory symbol,
-        string memory imageUrl,
-        string memory description,
+        string memory CIDLink,
         uint bondingTime,
         bool proxyCreation,
         uint timestampOverride,
@@ -78,8 +76,7 @@ interface IMineFun {
         returns (
             string memory name,
             string memory symbol,
-            string memory description,
-            string memory tokenImageUrl,
+            string memory metadataCID,
             uint fundingRaised,
             uint tokensBought,
             uint bondingDeadline,

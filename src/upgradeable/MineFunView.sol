@@ -23,8 +23,7 @@ abstract contract MineFunView is MineFunCore {
             allTokens[i] = MinedTokenView(
                 minedToken.name,
                 minedToken.symbol,
-                minedToken.description,
-                minedToken.tokenImageUrl,
+                minedToken.metadataCID,
                 minedToken.fundingRaised,
                 minedToken.tokensBought,
                 minedToken.bondingDeadline,
@@ -82,8 +81,7 @@ abstract contract MineFunView is MineFunCore {
         returns (
             string memory name,
             string memory symbol,
-            string memory description,
-            string memory tokenImageUrl,
+            string memory metadataCID,
             uint fundingRaised,
             uint tokensBought,
             uint bondingDeadline,
@@ -99,8 +97,7 @@ abstract contract MineFunView is MineFunCore {
         return (
             minedToken.name,
             minedToken.symbol,
-            minedToken.description,
-            minedToken.tokenImageUrl,
+            minedToken.metadataCID,
             minedToken.fundingRaised,
             minedToken.tokensBought,
             minedToken.bondingDeadline,
