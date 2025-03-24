@@ -18,6 +18,7 @@ abstract contract MineFunStorage is Initializable {
         string name;
         string symbol;
         string metadataCID;
+        string tokenImageUrl;
         uint fundingRaised;
         uint tokensBought;
         uint bondingDeadline;
