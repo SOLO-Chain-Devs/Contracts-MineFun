@@ -13,12 +13,9 @@ contract DeployProxy is Script {
         address uniswap_v2_router_ca = vm.envAddress("UNISWAP_V2_ROUTER_CA");
         address uniswap_v2_factory_ca = vm.envAddress("UNISWAP_V2_FACTORY_CA"); 
         address usdt_ca = vm.envAddress("USDT_CA");
-        
+        address team_wallet = vm.envAddress("TEAM_WALLET");
         // Start Broadcasting Transactions
         vm.startBroadcast(deployerPrivateKey);
-        
-        //address teamWallet = vm.envAddress("TEAM_WALLET");        
-        address teamWallet = msg.sender;
         
         // Deploy the implementation contract
         MineFun implementation = new MineFun();
@@ -32,7 +29,7 @@ contract DeployProxy is Script {
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
             MineFun.initialize.selector,
-            teamWallet,
+            team_wallet,
             uniswap_v2_router_ca,
             uniswap_v2_factory_ca,
             usdt_ca
@@ -49,7 +46,7 @@ contract DeployProxy is Script {
         
         // For verification, create a reference to interact with the proxy
         MineFun mineFun = MineFun(address(proxy));
-        console.log("MineFun initialized with teamWallet:", mineFun.teamWallet());
+        console.log("MineFun initialized with team wallet:", mineFun.teamWallet());
         
         vm.stopBroadcast();
     }
