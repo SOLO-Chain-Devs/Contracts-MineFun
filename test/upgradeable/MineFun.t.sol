@@ -55,7 +55,7 @@ contract MineFunTest is Test {
         uint totalTokensBought = 0;
 
         // Ensure bonding hasn't happened yet
-        (, , , ,uint tokensBought, , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+        (, , , , , uint tokensBought, , , , bool bonded) = tokenFactory.getMinedTokenDetails(
             minedTokenAddress
         );
         require(!bonded, "Token is already bonded");
@@ -80,7 +80,7 @@ contract MineFunTest is Test {
                 totalTokensBought += tokensPerMine;
 
                 // Check if bonding is reached
-                (, , , , tokensBought, , , , bonded) = tokenFactory.getMinedTokenDetails(
+                (, , , , , tokensBought, , , , bonded) = tokenFactory.getMinedTokenDetails(
                     minedTokenAddress
                 );
 
@@ -100,6 +100,7 @@ contract MineFunTest is Test {
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
             3 days,
             false,
             0,
@@ -125,6 +126,7 @@ contract MineFunTest is Test {
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
             3 days,
             false,
             0,
@@ -134,7 +136,7 @@ contract MineFunTest is Test {
         simulateBondingProcess(minedTokenAddress);
 
         // Verify that token bonded
-        (, , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+        (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
             minedTokenAddress
         );
         assertTrue(bonded, "Token should be bonded");
@@ -155,6 +157,7 @@ contract MineFunTest is Test {
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
             3 days,
             false,
             0,
@@ -178,6 +181,7 @@ contract MineFunTest is Test {
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
             1 days,
             false,
             0,
@@ -213,6 +217,7 @@ contract MineFunTest is Test {
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
             1 days,
             false,
             0,
@@ -223,7 +228,7 @@ contract MineFunTest is Test {
         simulateBondingProcess(minedTokenAddress);
 
         // Ensure bonding happened
-        (, , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+        (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
             minedTokenAddress
         );
         assertTrue(bonded, "Token should be bonded");
@@ -244,6 +249,7 @@ contract MineFunTest is Test {
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
             3 days,
             false,
             0,
@@ -274,7 +280,7 @@ contract MineFunTest is Test {
         simulateBondingProcess(minedTokenAddress);
 
         // Ensure bonding happened
-        (, , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+        (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
             minedTokenAddress
         );
         assertTrue(bonded, "Token should be bonded");
@@ -299,19 +305,22 @@ contract MineFunTest is Test {
         string memory name = "Test Token";
         string memory symbol = "TEST";
         string memory metadataCID = "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24";
+        string memory tokenImageUrl = "img://test.png";
         uint bondingDeadline = 3 days;
 
         // Create a mined token
         vm.prank(user1);
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
-        }(name, symbol, metadataCID, bondingDeadline, false, 0, 0);
+        }(name, symbol, metadataCID, tokenImageUrl, bondingDeadline, false, 0, 0);
 
         // Fetch token details
         (
             string memory fetchedName,
             string memory fetchedSymbol,
             string memory fetchedMetadataCID,
+            string memory fetchedDescription,
+            string memory fetchedImageUrl,
             uint fetchedFundingRaised,
             uint fetchedTokensBought,
             uint fetchedBondingDeadline,
@@ -327,6 +336,11 @@ contract MineFunTest is Test {
             fetchedMetadataCID,
             metadataCID,
             "Token CID Metadata should match"
+        );
+        assertEq(
+            fetchedImageUrl,
+            tokenImageUrl,
+            "Token image URL should match"
         );
         assertEq(fetchedFundingRaised, 0, "Funding raised should start at 0");
         assertEq(fetchedTokensBought, 0, "Tokens bought should start at 0");
