@@ -305,22 +305,21 @@ contract MineFunTest is Test {
         string memory name = "Test Token";
         string memory symbol = "TEST";
         string memory metadataCID = "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24";
-        string memory tokenImageUrl = "img://test.png";
+        string memory tokenImageCID = "img://test.png";
         uint bondingDeadline = 3 days;
 
         // Create a mined token
         vm.prank(user1);
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
-        }(name, symbol, metadataCID, tokenImageUrl, bondingDeadline, false, 0, 0);
+        }(name, symbol, metadataCID, tokenImageCID, bondingDeadline, false, 0, 0);
 
         // Fetch token details
         (
             string memory fetchedName,
             string memory fetchedSymbol,
             string memory fetchedMetadataCID,
-            string memory fetchedDescription,
-            string memory fetchedImageUrl,
+            string memory fetchedImageCID,
             uint fetchedFundingRaised,
             uint fetchedTokensBought,
             uint fetchedBondingDeadline,
@@ -338,8 +337,8 @@ contract MineFunTest is Test {
             "Token CID Metadata should match"
         );
         assertEq(
-            fetchedImageUrl,
-            tokenImageUrl,
+            fetchedImageCID,
+            tokenImageCID,
             "Token image URL should match"
         );
         assertEq(fetchedFundingRaised, 0, "Funding raised should start at 0");
