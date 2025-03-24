@@ -17,7 +17,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
      * @param name Token name
      * @param symbol Token symbol
      * @param CIDLink Token CID Link
-     * @param imageUrl URL to token image
+     * @param imageCID URL to token image
      * @param bondingTime Duration of bonding period in seconds
      * @return Address of the newly created token
      */
@@ -25,7 +25,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         string memory name,
         string memory symbol,
         string memory CIDLink,
-        string memory imageUrl,
+        string memory imageCID,
         uint bondingTime,
         bool proxyCreation,
         uint timestampOverride,
@@ -91,7 +91,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         newMinedToken.name = name;
         newMinedToken.symbol = symbol;
         newMinedToken.metadataCID = CIDLink; 
-        newMinedToken.tokenImageUrl = imageUrl;
+        newMinedToken.tokenImageCID = imageCID;
         newMinedToken.fundingRaised = 0;
         newMinedToken.tokensBought = 0;
         newMinedToken.bondingDeadline = block.timestamp + bondingTime;
@@ -106,7 +106,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
             name: newMinedToken.name,
             symbol: newMinedToken.symbol,
             metadataCID: newMinedToken.metadataCID,
-            tokenImageUrl: newMinedToken.tokenImageUrl,
+            tokenImageCID: newMinedToken.tokenImageCID,
             fundingRaised: newMinedToken.fundingRaised,
             tokensBought: newMinedToken.tokensBought,
             bondingDeadline: newMinedToken.bondingDeadline,

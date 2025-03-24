@@ -10,7 +10,7 @@ interface IMineFun {
         string name;
         string symbol;
         string metadataCID;
-        string tokenImageUrl;
+        string tokenImageCID;
         uint fundingRaised;
         uint tokensBought;
         uint bondingDeadline;
@@ -47,7 +47,7 @@ interface IMineFun {
         string memory name,
         string memory symbol,
         string memory CIDLink,
-        string memory imageUrl,
+        string memory imageCID,
         uint bondingTime,
         bool proxyCreation,
         uint timestampOverride,
@@ -79,7 +79,7 @@ interface IMineFun {
             string memory name,
             string memory symbol,
             string memory metadataCID,
-            string memory tokenImageUrl,
+            string memory tokenImageCID,
             uint fundingRaised,
             uint tokensBought,
             uint bondingDeadline,
