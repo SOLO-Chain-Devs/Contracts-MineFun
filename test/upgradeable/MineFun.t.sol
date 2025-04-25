@@ -15,6 +15,9 @@ import {MockERC20} from "../../src/MockERC20.sol";
 contract MineFunTest is Test {
     MineFun tokenFactory;
 
+    MockERC20 public mockStSolo;
+    MockERC20 public mockSolo;
+
     address deployer;
     address teamWallet = vm.addr(100); // Simulated team wallet
     address user1 = vm.addr(1);
@@ -43,11 +46,15 @@ contract MineFunTest is Test {
             initData
         );
         tokenFactory = MineFun(address(proxy));
+
+        mockStSolo = new MockERC20("Mock stSOLO", "stSOLO");
+        mockSolo = new MockERC20("Mock SOLO", "SOLO");
+
         vm.stopPrank();
-        // Fund users for testing
+
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
-        vm.deal(teamWallet, 0 ether); // Ensure team wallet starts empty
+        vm.deal(teamWallet, 0 ether);
     }
 
     function simulateBondingProcess(address minedTokenAddress) public {
@@ -96,6 +103,13 @@ contract MineFunTest is Test {
     }
 
     function testMineTokenTaxAllocation() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -122,6 +136,13 @@ contract MineFunTest is Test {
     }
 
     function testRetrieveTeamFundsAfterBonding() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -153,6 +174,13 @@ contract MineFunTest is Test {
     }
 
     function testTeamFundRetrievalFailsIfNotBonded() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -177,6 +205,13 @@ contract MineFunTest is Test {
     }
 
     function testRefundIncludesTeamPortion() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -212,6 +247,13 @@ contract MineFunTest is Test {
     }
 
     function testRefundFailsAfterBonding() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -243,6 +285,13 @@ contract MineFunTest is Test {
     }
 
     function testLiquidityAddedAfterBonding() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -300,6 +349,11 @@ contract MineFunTest is Test {
     }
 
     function testGetMinedTokenDetails() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        vm.stopPrank();
+
         // Token parameters
         string memory name = "Test Token";
         string memory symbol = "TEST";
@@ -426,6 +480,19 @@ contract MineFunTest is Test {
             stSoloTokenAddress,
             "stSolo Token address should change after setting"
         );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setStSoloTokenAddress(address(0));
+
+        vm.stopPrank();
     }
 
     function testSetSoloTokenAddress() public {
@@ -447,6 +514,19 @@ contract MineFunTest is Test {
             soloTokenAddress,
             "Solo Token address should change after setting"
         );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setSoloTokenAddress(address(0));
+
+        vm.stopPrank();
     }
 
     // Setting minimum tokens staked and held based on upper limits
@@ -473,6 +553,19 @@ contract MineFunTest is Test {
             predeterminedTestAmount,
             "After set, minSoloStakedForTokenCreation should match the new value"
         );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setMinSoloStakedForTokenCreation(10 ether);
+
+        vm.stopPrank();
     }
 
     function test_RevertWhen_SetMinTokensStakedForTokenCreationGoesOverUpperLimit()
@@ -508,6 +601,19 @@ contract MineFunTest is Test {
             predeterminedTestAmount,
             "After set, minSoloStakedForTokenCreation should match the new value"
         );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setMinSoloStakedForTokenCreation(10 ether);
+
+        vm.stopPrank();
     }
 
     function test_RevertWhen_SetMinTokensHeldForTokenMiningGoesOverUpperLimit()
