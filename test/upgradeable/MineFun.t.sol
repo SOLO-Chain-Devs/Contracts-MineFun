@@ -10,8 +10,13 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
+import {MockERC20} from "../../src/MockERC20.sol";
+
 contract MineFunTest is Test {
     MineFun tokenFactory;
+
+    MockERC20 public mockStSolo;
+    MockERC20 public mockSolo;
 
     address deployer;
     address teamWallet = vm.addr(100); // Simulated team wallet
@@ -22,7 +27,7 @@ contract MineFunTest is Test {
         deployer = msg.sender;
         string memory rpcUrl = vm.envString("RPC_URL");
         address uniswap_v2_router_ca = vm.envAddress("UNISWAP_V2_ROUTER_CA");
-        address uniswap_v2_factory_ca = vm.envAddress("UNISWAP_V2_FACTORY_CA"); 
+        address uniswap_v2_factory_ca = vm.envAddress("UNISWAP_V2_FACTORY_CA");
         address usdt_ca = vm.envAddress("USDT_CA");
 
         vm.createSelectFork(rpcUrl);
@@ -41,11 +46,15 @@ contract MineFunTest is Test {
             initData
         );
         tokenFactory = MineFun(address(proxy));
+
+        mockStSolo = new MockERC20("Mock stSOLO", "stSOLO");
+        mockSolo = new MockERC20("Mock SOLO", "SOLO");
+
         vm.stopPrank();
-        // Fund users for testing
+
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
-        vm.deal(teamWallet, 0 ether); // Ensure team wallet starts empty
+        vm.deal(teamWallet, 0 ether);
     }
 
     function simulateBondingProcess(address minedTokenAddress) public {
@@ -55,9 +64,8 @@ contract MineFunTest is Test {
         uint totalTokensBought = 0;
 
         // Ensure bonding hasn't happened yet
-        (, , , , , uint tokensBought, , , , bool bonded) = tokenFactory.getMinedTokenDetails(
-            minedTokenAddress
-        );
+        (, , , , , uint tokensBought, , , , bool bonded) = tokenFactory
+            .getMinedTokenDetails(minedTokenAddress);
         require(!bonded, "Token is already bonded");
 
         uint walletIndex = 1;
@@ -67,7 +75,9 @@ contract MineFunTest is Test {
             vm.deal(wallet, fundingAmount); // Fund wallet with ETH
             walletIndex++;
 
-            uint walletTokenBalance = IERC20(minedTokenAddress).balanceOf(wallet);
+            uint walletTokenBalance = IERC20(minedTokenAddress).balanceOf(
+                wallet
+            );
 
             vm.startPrank(wallet);
 
@@ -80,9 +90,8 @@ contract MineFunTest is Test {
                 totalTokensBought += tokensPerMine;
 
                 // Check if bonding is reached
-                (, , , , , tokensBought, , , , bonded) = tokenFactory.getMinedTokenDetails(
-                    minedTokenAddress
-                );
+                (, , , , , tokensBought, , , , bonded) = tokenFactory
+                    .getMinedTokenDetails(minedTokenAddress);
 
                 if (bonded) {
                     break;
@@ -94,6 +103,13 @@ contract MineFunTest is Test {
     }
 
     function testMineTokenTaxAllocation() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -120,6 +136,13 @@ contract MineFunTest is Test {
     }
 
     function testRetrieveTeamFundsAfterBonding() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -151,6 +174,13 @@ contract MineFunTest is Test {
     }
 
     function testTeamFundRetrievalFailsIfNotBonded() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -175,6 +205,13 @@ contract MineFunTest is Test {
     }
 
     function testRefundIncludesTeamPortion() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -186,7 +223,6 @@ contract MineFunTest is Test {
             false,
             0,
             0
-
         );
 
         vm.startPrank(user1);
@@ -211,6 +247,13 @@ contract MineFunTest is Test {
     }
 
     function testRefundFailsAfterBonding() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -222,7 +265,6 @@ contract MineFunTest is Test {
             false,
             0,
             0
-
         );
 
         simulateBondingProcess(minedTokenAddress);
@@ -243,6 +285,13 @@ contract MineFunTest is Test {
     }
 
     function testLiquidityAddedAfterBonding() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        tokenFactory.setSoloTokenAddress(address(mockSolo));
+        tokenFactory.setMinSoloHeldForTokenMining(0);
+        vm.stopPrank();
+
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
         }(
@@ -254,7 +303,6 @@ contract MineFunTest is Test {
             false,
             0,
             0
-
         );
 
         Token minedToken = Token(minedTokenAddress);
@@ -297,14 +345,20 @@ contract MineFunTest is Test {
         assertGt(finalLiquidity, 0, "Liquidity should be added after bonding");
 
         uint finalWETHLiq = IERC20(WETH).balanceOf(uniswapPair);
-        assertEq(finalWETHLiq, 1 ether); 
+        assertEq(finalWETHLiq, 1 ether);
     }
 
     function testGetMinedTokenDetails() public {
+        vm.startPrank(deployer);
+        tokenFactory.setStSoloTokenAddress(address(mockStSolo));
+        tokenFactory.setMinSoloStakedForTokenCreation(0);
+        vm.stopPrank();
+
         // Token parameters
         string memory name = "Test Token";
         string memory symbol = "TEST";
-        string memory metadataCID = "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24";
+        string
+            memory metadataCID = "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24";
         string memory tokenImageCID = "img://test.png";
         uint bondingDeadline = 3 days;
 
@@ -312,7 +366,16 @@ contract MineFunTest is Test {
         vm.prank(user1);
         address minedTokenAddress = tokenFactory.createMinedToken{
             value: 0.0001 ether
-        }(name, symbol, metadataCID, tokenImageCID, bondingDeadline, false, 0, 0);
+        }(
+            name,
+            symbol,
+            metadataCID,
+            tokenImageCID,
+            bondingDeadline,
+            false,
+            0,
+            0
+        );
 
         // Fetch token details
         (
@@ -359,7 +422,9 @@ contract MineFunTest is Test {
 
     function test_Change_Router() public {
         vm.prank(deployer);
-        tokenFactory.updateRouterAddress(0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70);
+        tokenFactory.updateRouterAddress(
+            0x029bE7FB61D3E60c1876F1E0B44506a7108d3c70
+        );
     }
 
     function test_Change_USDT() public {
@@ -367,14 +432,13 @@ contract MineFunTest is Test {
         vm.prank(deployer);
         tokenFactory.updateUSDTAddress(newUSDT);
 
-        assert(tokenFactory.USDT()==newUSDT);
+        assert(tokenFactory.USDT() == newUSDT);
 
         vm.prank(user1);
         vm.expectRevert();
         tokenFactory.updateUSDTAddress(newUSDT);
-
     }
-    
+
     function testUpdateTeamWallet() public {
         address newTeamWallet = vm.addr(200); // New team wallet address
 
@@ -392,5 +456,357 @@ contract MineFunTest is Test {
         vm.prank(user1);
         vm.expectRevert();
         tokenFactory.updateTeamWallet(vm.addr(300));
+    }
+
+    // Paywalling token creating and mining
+
+    // Setting addresses
+    function testSetStSoloTokenAddress() public {
+        vm.startPrank(deployer);
+        MockERC20 mockToken = new MockERC20("Mock stSOLO", "stSOLO");
+        address stSoloTokenAddress = address(mockToken);
+        address intialStSoloTokenAddress = tokenFactory.stSoloTokenAddress();
+
+        assertEq(
+            intialStSoloTokenAddress,
+            address(0),
+            "Before set, stSolo token address should be zero"
+        );
+
+        tokenFactory.setStSoloTokenAddress(stSoloTokenAddress);
+        address updatedStSoloTokenAddress = tokenFactory.stSoloTokenAddress();
+        assertEq(
+            updatedStSoloTokenAddress,
+            stSoloTokenAddress,
+            "stSolo Token address should change after setting"
+        );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setStSoloTokenAddress(address(0));
+
+        vm.stopPrank();
+    }
+
+    function testSetSoloTokenAddress() public {
+        vm.startPrank(deployer);
+        MockERC20 mockToken = new MockERC20("Mock SOLO", "SOLO");
+        address soloTokenAddress = address(mockToken);
+        address intialSoloTokenAddress = tokenFactory.soloTokenAddress();
+
+        assertEq(
+            intialSoloTokenAddress,
+            address(0),
+            "Before set, Solo token address should be zero"
+        );
+
+        tokenFactory.setSoloTokenAddress(soloTokenAddress);
+        address updatedSoloTokenAddress = tokenFactory.soloTokenAddress();
+        assertEq(
+            updatedSoloTokenAddress,
+            soloTokenAddress,
+            "Solo Token address should change after setting"
+        );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setSoloTokenAddress(address(0));
+
+        vm.stopPrank();
+    }
+
+    // Setting minimum tokens staked and held based on upper limits
+    function testSetMinTokensStakedForTokenCreation() public {
+        vm.startPrank(deployer);
+        uint256 initialMinTokensStaked = tokenFactory
+            .minSoloStakedForTokenCreation();
+
+        uint256 predeterminedTestAmount = 100 ether;
+
+        assertEq(
+            initialMinTokensStaked,
+            0,
+            "Before set, minSoloStakedForTokenCreation should be zero"
+        );
+
+        tokenFactory.setMinSoloStakedForTokenCreation(100 ether);
+
+        uint256 updatedMinTokensStaked = tokenFactory
+            .minSoloStakedForTokenCreation();
+
+        assertEq(
+            updatedMinTokensStaked,
+            predeterminedTestAmount,
+            "After set, minSoloStakedForTokenCreation should match the new value"
+        );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setMinSoloStakedForTokenCreation(10 ether);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_SetMinTokensStakedForTokenCreationGoesOverUpperLimit()
+        public
+    {
+        vm.startPrank(deployer);
+
+        vm.expectRevert(
+            "Value has to be lower than or equal to the upper limit for this variable."
+        );
+        tokenFactory.setMinSoloStakedForTokenCreation(1000000000 ether);
+    }
+
+    function testSetMinTokensHeldForTokenCreation() public {
+        vm.startPrank(deployer);
+        uint256 initialMinTokensHeld = tokenFactory.minSoloHeldForTokenMining();
+
+        uint256 predeterminedTestAmount = 100 ether;
+
+        assertEq(
+            initialMinTokensHeld,
+            0,
+            "Before set, minSoloHeldForTokenMining should be zero"
+        );
+
+        tokenFactory.setMinSoloHeldForTokenMining(100 ether);
+
+        uint256 updatedMinTokensStaked = tokenFactory
+            .minSoloHeldForTokenMining();
+
+        assertEq(
+            updatedMinTokensStaked,
+            predeterminedTestAmount,
+            "After set, minSoloStakedForTokenCreation should match the new value"
+        );
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
+        tokenFactory.setMinSoloStakedForTokenCreation(10 ether);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_SetMinTokensHeldForTokenMiningGoesOverUpperLimit()
+        public
+    {
+        vm.startPrank(deployer);
+
+        vm.expectRevert(
+            "Value has to be lower than or equal to the upper limit for this variable."
+        );
+
+        tokenFactory.setMinSoloHeldForTokenMining(1000000000 ether);
+    }
+
+    // Block and allowing mine/token creation based on balance
+    function testCreateToken_RevertWhen_CallerIsNotSoloStaker() public {
+        vm.startPrank(deployer);
+        MockERC20 mockToken = new MockERC20("Mock stSOLO", "stSOLO");
+
+        mockToken.mint(user1, 999 ether);
+        tokenFactory.setStSoloTokenAddress(address(mockToken));
+        tokenFactory.setMinSoloStakedForTokenCreation(1000 ether);
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        vm.expectRevert(
+            "You must hold a certain amount of stSolo to be able to create a token."
+        );
+
+        tokenFactory.createMinedToken{value: 0.0001 ether}(
+            "Test Token",
+            "TEST",
+            "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+            false,
+            0,
+            0
+        );
+
+        vm.stopPrank();
+    }
+
+    function testCreateToken_RevertWhen_StSoloAddressIsNotSet() public {
+        vm.startPrank(user1);
+
+        vm.expectRevert("stSolo token address not set");
+        tokenFactory.createMinedToken{value: 0.0001 ether}(
+            "Test Token",
+            "TEST",
+            "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+            false,
+            0,
+            0
+        );
+
+        vm.stopPrank();
+    }
+
+    function testCreateToken_WhenCallerIsSoloStaker() public {
+        vm.startPrank(deployer);
+        MockERC20 mockToken = new MockERC20("Mock stSOLO", "stSOLO");
+
+        mockToken.mint(user1, 1000 ether);
+        tokenFactory.setStSoloTokenAddress(address(mockToken));
+        tokenFactory.setMinSoloStakedForTokenCreation(1000 ether);
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        tokenFactory.createMinedToken{value: 0.0001 ether}(
+            "Test Token",
+            "TEST",
+            "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+            false,
+            0,
+            0
+        );
+
+        vm.stopPrank();
+    }
+
+    function testMineToken_RevertWhen_CallerIsNotSoloHolder() public {
+        vm.startPrank(deployer);
+        MockERC20 mockToken = new MockERC20("Mock stSOLO", "stSOLO");
+        MockERC20 mockToken2 = new MockERC20("Mock SOLO", "SOLO");
+
+        mockToken.mint(user1, 1000 ether);
+        mockToken2.mint(user1, 999 ether);
+        tokenFactory.setStSoloTokenAddress(address(mockToken));
+        tokenFactory.setSoloTokenAddress(address(mockToken2));
+
+        tokenFactory.setMinSoloStakedForTokenCreation(1000 ether);
+        tokenFactory.setMinSoloHeldForTokenMining(1000 ether);
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
+            "Test Token",
+            "TEST",
+            "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+            false,
+            0,
+            0
+        );
+
+        vm.expectRevert(
+            "You must hold a certain amount of Solo token to be able to mine."
+        );
+        tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
+
+        vm.stopPrank();
+    }
+
+    function testMineToken_RevertWhen_SoloAddressIsNotSet() public {
+        vm.startPrank(deployer);
+        MockERC20 mockToken = new MockERC20("Mock stSOLO", "stSOLO");
+        MockERC20 mockToken2 = new MockERC20("Mock SOLO", "SOLO");
+
+        mockToken.mint(user1, 1000 ether);
+        mockToken2.mint(user1, 1000 ether);
+        tokenFactory.setStSoloTokenAddress(address(mockToken));
+
+        tokenFactory.setMinSoloStakedForTokenCreation(1000 ether);
+        tokenFactory.setMinSoloHeldForTokenMining(1000 ether);
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
+            "Test Token",
+            "TEST",
+            "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+            false,
+            0,
+            0
+        );
+        vm.expectRevert("Solo token address not set");
+        tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
+
+        vm.stopPrank();
+    }
+
+    function testMineToken_CallerIsSoloHolder() public {
+        vm.startPrank(deployer);
+        MockERC20 mockToken = new MockERC20("Mock stSOLO", "stSOLO");
+        MockERC20 mockToken2 = new MockERC20("Mock SOLO", "SOLO");
+
+        mockToken.mint(user1, 1000 ether);
+        mockToken2.mint(user1, 1000 ether);
+        tokenFactory.setStSoloTokenAddress(address(mockToken));
+        tokenFactory.setSoloTokenAddress(address(mockToken2));
+
+        tokenFactory.setMinSoloStakedForTokenCreation(1000 ether);
+        tokenFactory.setMinSoloHeldForTokenMining(1000 ether);
+
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
+            "Test Token",
+            "TEST",
+            "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+            false,
+            0,
+            0
+        );
+
+        tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
+
+        vm.stopPrank();
     }
 }
