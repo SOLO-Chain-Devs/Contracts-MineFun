@@ -13,7 +13,7 @@ abstract contract MineFunStorage is Initializable {
     IUniswapV2Router01 public router;
     address public teamWallet; // Team wallet address
     mapping(address => uint) public teamFunds; // Tracks ETH allocated for team wallet per token
-    
+
     struct MinedToken {
         string name;
         string symbol;
@@ -25,6 +25,7 @@ abstract contract MineFunStorage is Initializable {
         address tokenAddress;
         address creatorAddress;
         bool bonded;
+        uint soloRequiredToMine;
         mapping(address => uint) contributions; // Tracks user ETH contributions
     }
 
