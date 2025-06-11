@@ -20,6 +20,11 @@ interface IMineFun {
     }
 
     // EVENTS
+
+    event SoloRequirementUpdated(
+        address indexed tokenAddress,
+        uint newRequirement
+    );
     event MinedTokenCreated(address indexed tokenAddress, MinedTokenView data);
     event TokenMined(
         address indexed tokenAddress,
@@ -51,12 +56,16 @@ interface IMineFun {
         uint bondingTime,
         bool proxyCreation,
         uint timestampOverride,
-        uint blockNumberOverride
+        uint blockNumberOverride,
+        uint soloRequiredToMine
     ) external payable returns (address);
 
     function mineToken(address minedTokenAddress) external payable;
 
-    function getAllMinedTokens() external view returns (MinedTokenView[] memory);
+    function getAllMinedTokens()
+        external
+        view
+        returns (MinedTokenView[] memory);
 
     function getContributionsForToken(
         address minedTokenAddress,
