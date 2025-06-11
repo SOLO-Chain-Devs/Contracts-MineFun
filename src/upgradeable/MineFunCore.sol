@@ -12,7 +12,6 @@ import "./IMineFun.sol";
  * @title MineFunCore
  * @dev Core business logic for the MineFun platform
  */
-
 abstract contract MineFunCore is MineFunAdmin, IMineFun {
     /*
      * @dev Creates a new mined token with the specified parameters
@@ -24,42 +23,14 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
      * @return Address of the newly created token
      */
 
-    address public stSoloTokenAddress;
     address public soloTokenAddress;
 
     // Upper limit to avoid a too high of a paywall
-    uint256 public constant upperLimitMinSoloStakedForTokenCreation =
-        1000000 ether;
     uint256 public constant upperLimitMinSoloHeldForTokenCreation =
         1000000 ether;
 
-    uint256 public minSoloStakedForTokenCreation;
-    uint256 public minSoloHeldForTokenMining;
-
-    function setStSoloTokenAddress(address newToken) public onlyOwner {
-        stSoloTokenAddress = newToken;
-    }
-
     function setSoloTokenAddress(address newToken) public onlyOwner {
         soloTokenAddress = newToken;
-    }
-
-    function setMinSoloStakedForTokenCreation(uint256 amount) public onlyOwner {
-        require(
-            amount <= upperLimitMinSoloHeldForTokenCreation,
-            "Value has to be lower than or equal to the upper limit for this variable."
-        );
-
-        minSoloStakedForTokenCreation = amount;
-    }
-
-    function setMinSoloHeldForTokenMining(uint256 amount) public onlyOwner {
-        require(
-            amount <= upperLimitMinSoloHeldForTokenCreation,
-            "Value has to be lower than or equal to the upper limit for this variable."
-        );
-
-        minSoloHeldForTokenMining = amount;
     }
 
     function createMinedToken(
@@ -70,7 +41,8 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         uint bondingTime,
         bool proxyCreation,
         uint timestampOverride,
-        uint blockNumberOverride
+        uint blockNumberOverride,
+        uint soloRequiredToMine
     ) public payable override returns (address) {
         require(
             msg.value >= MINEDTOKEN_CREATION_FEE,
@@ -79,18 +51,6 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         require(
             bondingTime >= 1 minutes && bondingTime <= 7 days,
             "Bonding time must be between 1 and 7 days"
-        );
-
-        require(
-            stSoloTokenAddress != address(0),
-            "stSolo token address not set"
-        );
-
-        uint256 userBal = IERC20(stSoloTokenAddress).balanceOf(msg.sender);
-
-        require(
-            userBal >= minSoloStakedForTokenCreation,
-            "You must hold a certain amount of stSolo to be able to create a token."
         );
 
         uint timestamp;
@@ -147,6 +107,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         newMinedToken.tokenAddress = minedTokenAddress;
         newMinedToken.creatorAddress = msg.sender;
         newMinedToken.bonded = false;
+        newMinedToken.soloRequiredToMine = soloRequiredToMine;
 
         minedTokenAddresses.push(minedTokenAddress);
 
@@ -168,16 +129,13 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         return minedTokenAddress;
     }
 
-    /**
-     * @dev Mine tokens by contributing ETH
-     * @param minedTokenAddress Address of the token to mine
-     */
     function mineToken(address minedTokenAddress) public payable override {
         MinedToken storage listedToken = addressToMinedTokenMapping[
             minedTokenAddress
         ];
         require(listedToken.tokenAddress != address(0), "Token not found");
         require(!listedToken.bonded, "Token already bonded");
+
         require(
             block.timestamp < listedToken.bondingDeadline,
             "Bonding period expired"
@@ -188,7 +146,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         uint256 userBal = IERC20(soloTokenAddress).balanceOf(msg.sender);
 
         require(
-            userBal >= minSoloHeldForTokenMining,
+            userBal >= listedToken.soloRequiredToMine,
             "You must hold a certain amount of Solo token to be able to mine."
         );
 
@@ -235,6 +193,20 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
             // Unlock the token for transfers
             minedToken.launchToken();
         }
+    }
+
+    function updateSoloRequiredToMine(
+        address minedTokenAddress,
+        uint newRequirement
+    ) external {
+        MinedToken storage listedToken = addressToMinedTokenMapping[
+            minedTokenAddress
+        ];
+        require(listedToken.tokenAddress != address(0), "Token not found");
+        require(msg.sender == listedToken.creatorAddress, "Not token creator");
+
+        listedToken.soloRequiredToMine = newRequirement;
+        emit SoloRequirementUpdated(minedTokenAddress, newRequirement);
     }
 
     /**
