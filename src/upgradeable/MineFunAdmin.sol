@@ -44,7 +44,5 @@ abstract contract MineFunAdmin is MineFunStorage, OwnableUpgradeable, UUPSUpgrad
      * @dev Function that authorizes an upgrade to a new implementation
      * @param newImplementation Address of the new implementation
      */
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

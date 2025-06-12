@@ -35,16 +35,9 @@ contract MineFunTest is Test {
 
         MineFun implementation = new MineFun();
         bytes memory initData = abi.encodeWithSelector(
-            MineFun.initialize.selector,
-            teamWallet,
-            uniswap_v2_router_ca,
-            uniswap_v2_factory_ca,
-            usdt_ca
+            MineFun.initialize.selector, teamWallet, uniswap_v2_router_ca, uniswap_v2_factory_ca, usdt_ca
         );
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            initData
-        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         tokenFactory = MineFun(address(proxy));
 
         mockStSolo = new MockERC20("Mock stSOLO", "stSOLO");
@@ -451,29 +444,16 @@ contract MineFunTest is Test {
         address soloTokenAddress = address(mockToken);
         address intialSoloTokenAddress = tokenFactory.soloTokenAddress();
 
-        assertEq(
-            intialSoloTokenAddress,
-            address(0),
-            "Before set, Solo token address should be zero"
-        );
+        assertEq(intialSoloTokenAddress, address(0), "Before set, Solo token address should be zero");
 
         tokenFactory.setSoloTokenAddress(soloTokenAddress);
         address updatedSoloTokenAddress = tokenFactory.soloTokenAddress();
-        assertEq(
-            updatedSoloTokenAddress,
-            soloTokenAddress,
-            "Solo Token address should change after setting"
-        );
+        assertEq(updatedSoloTokenAddress, soloTokenAddress, "Solo Token address should change after setting");
 
         vm.stopPrank();
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
-                user1
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), user1));
         tokenFactory.setSoloTokenAddress(address(0));
 
         vm.stopPrank();
@@ -486,9 +466,7 @@ contract MineFunTest is Test {
         vm.stopPrank();
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{
-            value: 0.0001 ether
-        }(
+        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -516,9 +494,7 @@ contract MineFunTest is Test {
 
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{
-            value: 0.0001 ether
-        }(
+        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -530,9 +506,7 @@ contract MineFunTest is Test {
             1000 ether
         );
 
-        vm.expectRevert(
-            "You must hold a certain amount of Solo token to be able to mine."
-        );
+        vm.expectRevert("You must hold a certain amount of Solo token to be able to mine.");
         tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
 
         vm.stopPrank();
@@ -549,9 +523,7 @@ contract MineFunTest is Test {
 
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{
-            value: 0.0001 ether
-        }(
+        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -563,9 +535,7 @@ contract MineFunTest is Test {
             1000 ether
         );
 
-        address createdTokenAdd2 = tokenFactory.createMinedToken{
-            value: 0.0001 ether
-        }(
+        address createdTokenAdd2 = tokenFactory.createMinedToken{value: 0.0001 ether}(
             "fffest Token",
             "TEasdfST",
             "bafkreiculfgfff5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -586,9 +556,7 @@ contract MineFunTest is Test {
     function testUpdateSoloRequiredToMine_UpdatesSuccessfully() public {
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{
-            value: 0.0001 ether
-        }(
+        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -600,25 +568,18 @@ contract MineFunTest is Test {
             1000 ether
         );
 
-        (, , , , , , , , address creatorAddress, ) = tokenFactory
-            .getMinedTokenDetails(createdTokenAdd);
+        (,,,,,,,, address creatorAddress,) = tokenFactory.getMinedTokenDetails(createdTokenAdd);
         assertEq(creatorAddress, user1, "Creator should be user1");
 
         tokenFactory.updateSoloRequiredToMine(createdTokenAdd, 2000 ether);
 
-        (, , , , , , , , address fetchedCreator, ) = tokenFactory
-            .getMinedTokenDetails(createdTokenAdd);
+        (,,,,,,,, address fetchedCreator,) = tokenFactory.getMinedTokenDetails(createdTokenAdd);
 
         assertEq(fetchedCreator, user1, "Creator should remain user1");
 
         // Assuming you expose this for test verification or access mapping directly
-        (, , , , , , , , , , uint actualSoloRequirement) = tokenFactory
-            .addressToMinedTokenMapping(createdTokenAdd);
-        assertEq(
-            actualSoloRequirement,
-            2000 ether,
-            "Solo requirement should update"
-        );
+        (,,,,,,,,,, uint256 actualSoloRequirement) = tokenFactory.addressToMinedTokenMapping(createdTokenAdd);
+        assertEq(actualSoloRequirement, 2000 ether, "Solo requirement should update");
 
         vm.stopPrank();
     }
@@ -626,9 +587,7 @@ contract MineFunTest is Test {
     function testUpdateSoloRequiredToMine_RevertWhen_NotCreator() public {
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{
-            value: 0.0001 ether
-        }(
+        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
