@@ -131,6 +131,8 @@ jobs:
 
     - name: Commit and push changes
       if: steps.deploy.outputs.NEW_IMPLEMENTATION != ''
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
@@ -142,7 +144,7 @@ jobs:
           git add DEPLOYMENT.md
           git commit -m "🚀 Automated deployment: Update implementation to ${{ steps.deploy.outputs.NEW_IMPLEMENTATION }}"
           
-          git push origin deploy/redeploy-implementation
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git deploy/redeploy-implementation
           echo "✅ Pushed updated DEPLOYMENT.md"
         fi
 
