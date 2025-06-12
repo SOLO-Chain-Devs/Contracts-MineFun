@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - deploy/redeploy-implementation
-  pull_request:
-    branches:
-      - deploy/redeploy-implementation
   workflow_dispatch:
     inputs:
       force_deploy:
@@ -110,11 +107,12 @@ jobs:
         # Wait a moment for blockchain confirmation
         sleep 10
         
-        # Verify the proxy is pointing to new implementation
-        current_impl=$(cast call $PROXY_ADDRESS "0x5c60da1b" --rpc-url $RPC_URL)
+        # Verify the proxy is pointing to new implementation using EIP-1967 storage slot
+        # Implementation slot: 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
+        current_impl=$(cast storage $PROXY_ADDRESS 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc --rpc-url $RPC_URL)
         expected_impl="${{ steps.deploy.outputs.NEW_IMPLEMENTATION }}"
         
-        # Convert to same format for comparison
+        # Convert to same format for comparison (remove leading zeros)
         current_impl_clean=$(echo $current_impl | sed 's/0x000000000000000000000000/0x/')
         
         echo "Expected implementation: $expected_impl"
@@ -124,6 +122,8 @@ jobs:
           echo "✅ Proxy successfully upgraded to new implementation"
         else
           echo "❌ Proxy upgrade verification failed"
+          echo "Expected: $expected_impl"
+          echo "Found: $current_impl_clean"
           exit 1
         fi
 
