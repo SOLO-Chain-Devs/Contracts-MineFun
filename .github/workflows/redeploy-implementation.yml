@@ -1,0 +1,166 @@
+name: Redeploy Implementation
+
+on:
+  push:
+    branches:
+      - deploy/redeploy-implementation
+  pull_request:
+    branches:
+      - deploy/redeploy-implementation
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even if no changes detected'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  FOUNDRY_PROFILE: default
+
+jobs:
+  redeploy-implementation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+      with:
+        version: nightly
+
+    - name: Install dependencies
+      run: forge install
+
+    - name: Compile contracts
+      run: forge build
+
+    - name: Run tests
+      run: forge test
+
+    - name: Setup environment variables
+      run: |
+        echo "PRIVATE_KEY=${{ secrets.DEPLOYER_PK }}" >> $GITHUB_ENV
+        echo "RPC_URL=${{ vars.RPC_URL }}" >> $GITHUB_ENV
+        echo "PROXY_ADDRESS=${{ vars.PROXY_ADDRESS }}" >> $GITHUB_ENV
+        echo "UNISWAP_V2_ROUTER_CA=${{ vars.UNISWAP_V2_ROUTER_CA }}" >> $GITHUB_ENV
+        echo "UNISWAP_V2_FACTORY_CA=${{ vars.UNISWAP_V2_FACTORY_CA }}" >> $GITHUB_ENV
+        echo "USDT_CA=${{ vars.USDT_CA }}" >> $GITHUB_ENV
+        echo "TEAM_WALLET=${{ vars.TEAM_WALLET }}" >> $GITHUB_ENV
+
+    - name: Deploy new implementation
+      id: deploy
+      run: |
+        # Deploy and capture output
+        output=$(forge script script/RedeployImplementation.s.sol --rpc-url $RPC_URL --broadcast 2>&1)
+        echo "Deploy output:"
+        echo "$output"
+        
+        # Extract new implementation address
+        new_impl=$(echo "$output" | grep "New MineFun implementation deployed at:" | sed 's/.*: //')
+        echo "NEW_IMPLEMENTATION=$new_impl" >> $GITHUB_OUTPUT
+        echo "New implementation: $new_impl"
+        
+        # Verify deployment was successful
+        if [ -z "$new_impl" ]; then
+          echo "❌ Failed to extract implementation address"
+          exit 1
+        fi
+        
+        echo "✅ Deployment successful"
+
+    - name: Update DEPLOYMENT.md
+      if: steps.deploy.outputs.NEW_IMPLEMENTATION != ''
+      run: |
+        # Get current timestamp
+        timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        
+        # Get current git commit hash
+        commit_hash=$(git rev-parse HEAD)
+        
+        # Create new deployment entry
+        new_implementation="${{ steps.deploy.outputs.NEW_IMPLEMENTATION }}"
+        
+        # Update DEPLOYMENT.md with new implementation
+        sed -i "s/### Current Implementation/### Current Implementation/" DEPLOYMENT.md
+        sed -i "s|- \*\*Address\*\*: \`0x[a-fA-F0-9]*\`|- **Address**: \`$new_implementation\`|" DEPLOYMENT.md
+        sed -i "s|- \*\*Deployed\*\*: .*|- **Deployed**: $timestamp|" DEPLOYMENT.md
+        
+        # Add to deployment history
+        echo "" >> temp_deployment.txt
+        echo "### $timestamp - Automated Implementation Upgrade" >> temp_deployment.txt
+        echo "- Deployed new MineFun implementation: \`$new_implementation\`" >> temp_deployment.txt
+        echo "- Upgraded proxy to point to new implementation" >> temp_deployment.txt
+        echo "- Commit: \`$commit_hash\`" >> temp_deployment.txt
+        echo "- All data preserved in proxy" >> temp_deployment.txt
+        
+        # Insert after "## Deployment History" line
+        sed -i '/## Deployment History/r temp_deployment.txt' DEPLOYMENT.md
+        rm temp_deployment.txt
+        
+        echo "✅ Updated DEPLOYMENT.md with new implementation address"
+
+    - name: Verify deployment
+      if: steps.deploy.outputs.NEW_IMPLEMENTATION != ''
+      run: |
+        # Wait a moment for blockchain confirmation
+        sleep 10
+        
+        # Verify the proxy is pointing to new implementation
+        current_impl=$(cast call $PROXY_ADDRESS "0x5c60da1b" --rpc-url $RPC_URL)
+        expected_impl="${{ steps.deploy.outputs.NEW_IMPLEMENTATION }}"
+        
+        # Convert to same format for comparison
+        current_impl_clean=$(echo $current_impl | sed 's/0x000000000000000000000000/0x/')
+        
+        echo "Expected implementation: $expected_impl"
+        echo "Current proxy implementation: $current_impl_clean"
+        
+        if [ "$current_impl_clean" = "$expected_impl" ]; then
+          echo "✅ Proxy successfully upgraded to new implementation"
+        else
+          echo "❌ Proxy upgrade verification failed"
+          exit 1
+        fi
+
+    - name: Commit and push changes
+      if: steps.deploy.outputs.NEW_IMPLEMENTATION != ''
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Check if there are changes to commit
+        if git diff --quiet DEPLOYMENT.md; then
+          echo "No changes to DEPLOYMENT.md to commit"
+        else
+          git add DEPLOYMENT.md
+          git commit -m "🚀 Automated deployment: Update implementation to ${{ steps.deploy.outputs.NEW_IMPLEMENTATION }}"
+          
+          git push origin deploy/redeploy-implementation
+          echo "✅ Pushed updated DEPLOYMENT.md"
+        fi
+
+    - name: Create deployment summary
+      if: always()
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.deploy.outcome }}" = "success" ]; then
+          echo "✅ **Status**: Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "📝 **New Implementation**: \`${{ steps.deploy.outputs.NEW_IMPLEMENTATION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Proxy Address**: \`${{ env.PROXY_ADDRESS }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "⏰ **Deployed At**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Status**: Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the logs for more information." >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "1. Verify the deployment on the blockchain explorer" >> $GITHUB_STEP_SUMMARY
+        echo "2. Update frontend/applications to use the proxy address" >> $GITHUB_STEP_SUMMARY
+        echo "3. Test the upgraded functionality" >> $GITHUB_STEP_SUMMARY
