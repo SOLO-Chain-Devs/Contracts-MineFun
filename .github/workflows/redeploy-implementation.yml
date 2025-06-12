@@ -14,6 +14,7 @@ on:
 
 env:
   FOUNDRY_PROFILE: default
+  FOUNDRY_DISABLE_NIGHTLY_WARNING: true
 
 jobs:
   redeploy-implementation:
@@ -112,17 +113,18 @@ jobs:
         current_impl=$(cast storage $PROXY_ADDRESS 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc --rpc-url $RPC_URL)
         expected_impl="${{ steps.deploy.outputs.NEW_IMPLEMENTATION }}"
         
-        # Convert to same format for comparison (remove leading zeros)
-        current_impl_clean=$(echo $current_impl | sed 's/0x000000000000000000000000/0x/')
+        # Convert to same format for comparison (remove leading zeros and normalize case)
+        current_impl_clean=$(echo $current_impl | sed 's/0x000000000000000000000000/0x/' | tr '[:upper:]' '[:lower:]')
+        expected_impl_lower=$(echo $expected_impl | tr '[:upper:]' '[:lower:]')
         
         echo "Expected implementation: $expected_impl"
         echo "Current proxy implementation: $current_impl_clean"
         
-        if [ "$current_impl_clean" = "$expected_impl" ]; then
+        if [ "$current_impl_clean" = "$expected_impl_lower" ]; then
           echo "✅ Proxy successfully upgraded to new implementation"
         else
           echo "❌ Proxy upgrade verification failed"
-          echo "Expected: $expected_impl"
+          echo "Expected: $expected_impl_lower"
           echo "Found: $current_impl_clean"
           exit 1
         fi
