@@ -11,9 +11,9 @@ interface IMineFun {
         string symbol;
         string metadataCID;
         string tokenImageCID;
-        uint fundingRaised;
-        uint tokensBought;
-        uint bondingDeadline;
+        uint256 fundingRaised;
+        uint256 tokensBought;
+        uint256 bondingDeadline;
         address tokenAddress;
         address creatorAddress;
         bool bonded;
@@ -21,31 +21,13 @@ interface IMineFun {
 
     // EVENTS
 
-    event SoloRequirementUpdated(
-        address indexed tokenAddress,
-        uint newRequirement
-    );
+    event SoloRequirementUpdated(address indexed tokenAddress, uint256 newRequirement);
     event MinedTokenCreated(address indexed tokenAddress, MinedTokenView data);
-    event TokenMined(
-        address indexed tokenAddress,
-        address indexed miner,
-        uint amount
-    );
+    event TokenMined(address indexed tokenAddress, address indexed miner, uint256 amount);
     event TokenBonded(address indexed tokenAddress, uint256 fundingRaised);
-    event LiquidityPoolCreated(
-        address indexed pairAddress,
-        address indexed tokenAddress
-    );
-    event LiquidityProvided(
-        address indexed tokenAddress,
-        uint tokenAmount,
-        uint ethAmount
-    );
-    event ContributionRefunded(
-        address indexed tokenAddress,
-        address indexed contributor,
-        uint amount
-    );
+    event LiquidityPoolCreated(address indexed pairAddress, address indexed tokenAddress);
+    event LiquidityProvided(address indexed tokenAddress, uint256 tokenAmount, uint256 ethAmount);
+    event ContributionRefunded(address indexed tokenAddress, address indexed contributor, uint256 amount);
 
     // EXTERNAL FUNCTIONS
     function createMinedToken(
@@ -53,35 +35,27 @@ interface IMineFun {
         string memory symbol,
         string memory CIDLink,
         string memory imageCID,
-        uint bondingTime,
+        uint256 bondingTime,
         bool proxyCreation,
-        uint timestampOverride,
-        uint blockNumberOverride,
-        uint soloRequiredToMine
+        uint256 timestampOverride,
+        uint256 blockNumberOverride,
+        uint256 soloRequiredToMine
     ) external payable returns (address);
 
     function mineToken(address minedTokenAddress) external payable;
 
-    function getAllMinedTokens()
+    function getAllMinedTokens() external view returns (MinedTokenView[] memory);
+
+    function getContributionsForToken(address minedTokenAddress, address user) external view returns (uint256);
+
+    function getAllContributionsForToken(address minedTokenAddress, address[] memory contributors)
         external
         view
-        returns (MinedTokenView[] memory);
-
-    function getContributionsForToken(
-        address minedTokenAddress,
-        address user
-    ) external view returns (uint);
-
-    function getAllContributionsForToken(
-        address minedTokenAddress,
-        address[] memory contributors
-    ) external view returns (uint[] memory);
+        returns (uint256[] memory);
 
     function refundContributors(address minedTokenAddress) external;
 
-    function getMinedTokenDetails(
-        address minedTokenAddress
-    )
+    function getMinedTokenDetails(address minedTokenAddress)
         external
         view
         returns (
@@ -89,9 +63,9 @@ interface IMineFun {
             string memory symbol,
             string memory metadataCID,
             string memory tokenImageCID,
-            uint fundingRaised,
-            uint tokensBought,
-            uint bondingDeadline,
+            uint256 fundingRaised,
+            uint256 tokensBought,
+            uint256 bondingDeadline,
             address tokenAddress,
             address creatorAddress,
             bool bonded

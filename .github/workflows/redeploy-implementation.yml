@@ -36,12 +36,6 @@ jobs:
     - name: Install dependencies
       run: forge install
 
-    - name: Compile contracts
-      run: forge build
-
-    - name: Run tests
-      run: forge test
-
     - name: Setup environment variables
       run: |
         echo "PRIVATE_KEY=${{ secrets.DEPLOYER_PK }}" >> $GITHUB_ENV
@@ -51,6 +45,12 @@ jobs:
         echo "UNISWAP_V2_FACTORY_CA=${{ vars.UNISWAP_V2_FACTORY_CA }}" >> $GITHUB_ENV
         echo "USDT_CA=${{ vars.USDT_CA }}" >> $GITHUB_ENV
         echo "TEAM_WALLET=${{ vars.TEAM_WALLET }}" >> $GITHUB_ENV
+
+    - name: Compile contracts
+      run: forge build
+
+    - name: Run tests
+      run: forge test
 
     - name: Deploy new implementation
       id: deploy
