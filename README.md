@@ -90,6 +90,7 @@ The project uses Foundry for deployment with the following scripts:
 ```
 script/
 ├── DeployProxy.s.sol         # Deploys the upgradeable proxy system
+├── RedeployImplementation.s.sol # Redeploy the implementation directly 
 ├── Imports-factory.s.sol     # Uniswap factory imports
 ├── Imports.router.s.sol      # Uniswap router imports
 └── UniswapDeployer.s.sol     # Deploys Uniswap contracts for testing
@@ -118,7 +119,10 @@ script/
    ```
    forge script script/DeployProxy.s.sol:DeployProxy --rpc-url $SOLO_TESTNET_RPC_URL --broadcast --verify --verifier blockscout --verifier-url $SOLO_TESTNET_BLOCKSCOUT_API_URL --chain-id 8884571
    ```
-
+6. Deploy the implementation:
+   ```
+   forge script script/RedeployImplementation:RedeployImplementation --rpc-url $SOLO_TESNET_RPC_URL --broadcast
+   ```
 ## Interacting with the Platform
 
 ### Creating a Mined Token
