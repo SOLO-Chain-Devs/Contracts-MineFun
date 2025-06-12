@@ -10,18 +10,14 @@ contract Token is ERC20, Ownable {
 
     event Launched(uint256 timestamp);
 
-    constructor(
-        string memory name,
-        string memory symbol,
-        uint initialMintValue
-    ) ERC20(name, symbol) Ownable(msg.sender) {
+    constructor(string memory name, string memory symbol, uint256 initialMintValue)
+        ERC20(name, symbol)
+        Ownable(msg.sender)
+    {
         _mint(msg.sender, initialMintValue);
     }
 
-    function mint(
-        address receiver,
-        uint mintQty
-    ) external onlyOwner returns (uint) {
+    function mint(address receiver, uint256 mintQty) external onlyOwner returns (uint256) {
         _mint(receiver, mintQty);
         return 1;
     }
@@ -30,16 +26,9 @@ contract Token is ERC20, Ownable {
         _burn(_account, _amount);
     }
 
-    function _update(
-        address from,
-        address to,
-        uint256 value
-    ) internal virtual override {
+    function _update(address from, address to, uint256 value) internal virtual override {
         if (!launched) {
-            require(
-                from == address(0) || from == owner(),
-                "Cannot transfer tokens until bonding is complete"
-            );
+            require(from == address(0) || from == owner(), "Cannot transfer tokens until bonding is complete");
         }
 
         super._update(from, to, value);

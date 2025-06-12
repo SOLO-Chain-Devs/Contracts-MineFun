@@ -13,13 +13,9 @@ abstract contract MineFunView is MineFunCore {
      * @return Array of MinedTokenView structs
      */
     function getAllMinedTokens() public view override returns (MinedTokenView[] memory) {
-        MinedTokenView[] memory allTokens = new MinedTokenView[](
-            minedTokenAddresses.length
-        );
-        for (uint i = 0; i < minedTokenAddresses.length; i++) {
-            MinedToken storage minedToken = addressToMinedTokenMapping[
-                minedTokenAddresses[i]
-            ];
+        MinedTokenView[] memory allTokens = new MinedTokenView[](minedTokenAddresses.length);
+        for (uint256 i = 0; i < minedTokenAddresses.length; i++) {
+            MinedToken storage minedToken = addressToMinedTokenMapping[minedTokenAddresses[i]];
             allTokens[i] = MinedTokenView(
                 minedToken.name,
                 minedToken.symbol,
@@ -42,12 +38,8 @@ abstract contract MineFunView is MineFunCore {
      * @param user Address of the user
      * @return Contribution amount
      */
-    function getContributionsForToken(
-        address minedTokenAddress,
-        address user
-    ) public view override returns (uint) {
-        return
-            addressToMinedTokenMapping[minedTokenAddress].contributions[user];
+    function getContributionsForToken(address minedTokenAddress, address user) public view override returns (uint256) {
+        return addressToMinedTokenMapping[minedTokenAddress].contributions[user];
     }
 
     /**
@@ -56,14 +48,15 @@ abstract contract MineFunView is MineFunCore {
      * @param contributors Array of contributor addresses
      * @return Array of contribution amounts
      */
-    function getAllContributionsForToken(
-        address minedTokenAddress,
-        address[] memory contributors
-    ) public view override returns (uint[] memory) {
-        uint[] memory contributions = new uint[](contributors.length);
-        for (uint i = 0; i < contributors.length; i++) {
-            contributions[i] = addressToMinedTokenMapping[minedTokenAddress]
-                .contributions[contributors[i]];
+    function getAllContributionsForToken(address minedTokenAddress, address[] memory contributors)
+        public
+        view
+        override
+        returns (uint256[] memory)
+    {
+        uint256[] memory contributions = new uint256[](contributors.length);
+        for (uint256 i = 0; i < contributors.length; i++) {
+            contributions[i] = addressToMinedTokenMapping[minedTokenAddress].contributions[contributors[i]];
         }
         return contributions;
     }
@@ -73,9 +66,7 @@ abstract contract MineFunView is MineFunCore {
      * @param minedTokenAddress Address of the token
      * returns Tuple containing all token details
      */
-    function getMinedTokenDetails(
-        address minedTokenAddress
-    )
+    function getMinedTokenDetails(address minedTokenAddress)
         public
         view
         override
@@ -84,17 +75,15 @@ abstract contract MineFunView is MineFunCore {
             string memory symbol,
             string memory metadataCID,
             string memory tokenImageCID,
-            uint fundingRaised,
-            uint tokensBought,
-            uint bondingDeadline,
+            uint256 fundingRaised,
+            uint256 tokensBought,
+            uint256 bondingDeadline,
             address tokenAddress,
             address creatorAddress,
             bool bonded
         )
     {
-        MinedToken storage minedToken = addressToMinedTokenMapping[
-            minedTokenAddress
-        ];
+        MinedToken storage minedToken = addressToMinedTokenMapping[minedTokenAddress];
 
         return (
             minedToken.name,
