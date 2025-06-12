@@ -15,6 +15,7 @@ contract DeployProxy is Script {
         address usdt_ca = vm.envAddress("USDT_CA");
         address team_wallet = vm.envAddress("TEAM_WALLET");
         // Start Broadcasting Transactions
+        address deployerAddress = vm.addr(deployerPrivateKey);
         vm.startBroadcast(deployerPrivateKey);
         
         // Deploy the implementation contract
@@ -39,7 +40,8 @@ contract DeployProxy is Script {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(implementation),
             //address(proxyAdmin), // More secure way to deploy in production
-            address(msg.sender), // Deployer is admin
+            // address(msg.sender), DO NOT USE THIS, WILL USE FOUNDY DEFAULT
+            deployerAddress,
             initData
         );
         console.log("MineFun proxy deployed at:", address(proxy));
