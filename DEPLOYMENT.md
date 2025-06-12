@@ -5,23 +5,23 @@
 ## Current Deployment (Latest)
 
 ### Proxy Contract (USE THIS ADDRESS)
-- **Address**: `0x63029F4622c80053795db373010C00cDbB27ED18`
+- **Address**: `0xeB9c13a16846c943F443Bfe7721f08351A5Db8a6`
 - **Type**: TransparentUpgradeableProxy
 - **Admin**: `0x3b7966d16b59a5548709ef3c5877ee1862e820f4` (ProxyAdmin contract)
 - **Admin Owner**: `0x23c3b9b2897A3cca328062DAB2CB9601Dc6dD316` (Deployer wallet)
 - **Status**: ✅ Active - Use this address for all interactions
 
 ### Current Implementation
-- **Address**: `0xf7dbC29DB695d0f809f8738e964A669b914c698E`
+- **Address**: `0xeB9c13a16846c943F443Bfe7721f08351A5Db8a6`
 - **Contract**: MineFun
-- **Deployed**: Fresh deployment with updated script (13-06-2025)
+- **Deployed**: 2025-06-12 23:08:07 UTC
 - **Status**: ✅ Active through proxy
 
 ## Previous Implementations
 
 ### Original Implementation
 NOTE: We accessed this directly. This was a mistake.
-- **Address**: `0xbeab24392cd01597b2ff4a1328d6f754d4654f59`
+- **Address**: `0xeB9c13a16846c943F443Bfe7721f08351A5Db8a6`
 - **Contract**: MineFun
 - **Status**: ❌ Deprecated - Do not use directly
 
@@ -29,7 +29,7 @@ NOTE: We accessed this directly. This was a mistake.
 
 ### Proxy Admin
 - **Type**: ProxyAdmin Contract
-- **Address**: `0x05647cc12c4f3b19127fb6104fd38e0db2a0406c`
+- **Address**: `0xeB9c13a16846c943F443Bfe7721f08351A5Db8a6`
 - **Owner**: `0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38`
 - **Role**: Can upgrade proxy implementation via ProxyAdmin contract
 - **Note**: ⚠️ Uses ProxyAdmin pattern, not direct EOA admin
@@ -53,6 +53,12 @@ TEAM_WALLET=<team_wallet_address>
 ```
 
 ## Deployment History
+
+### 2025-06-12 23:08:07 UTC - Automated Implementation Upgrade
+- Deployed new MineFun implementation: `0xeB9c13a16846c943F443Bfe7721f08351A5Db8a6`
+- Upgraded proxy to point to new implementation
+- Commit: `93808bbf49d55ca546fcccf621de2d2eba6df06b`
+- All data preserved in proxy
 
 ### 13-06-2025 Clean Deployment with Updated Script (CURRENT)
 - Deployed MineFun implementation: `0xf7dbC29DB695d0f809f8738e964A669b914c698E`
