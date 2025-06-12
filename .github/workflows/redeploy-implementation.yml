@@ -75,7 +75,7 @@ jobs:
       if: steps.deploy.outputs.NEW_IMPLEMENTATION != ''
       run: |
         # Get current timestamp
-        timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        timestamp=$(date -u +"%d-%m-%Y %H:%M:%S UTC")
         
         # Get current git commit hash
         commit_hash=$(git rev-parse HEAD)
