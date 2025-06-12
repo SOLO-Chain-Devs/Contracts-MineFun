@@ -14,6 +14,7 @@ on:
 
 env:
   FOUNDRY_PROFILE: default
+  FOUNDRY_DISABLE_NIGHTLY_WARNING: true
 
 jobs:
   redeploy-implementation:
