@@ -35,7 +35,7 @@ abstract contract MineFunStorage is Initializable {
     // Constants
     uint256 constant MINEDTOKEN_CREATION_FEE = 0.0001 ether;
     uint256 constant MINEDTOKEN_FUNDING_GOAL = 0.01 ether; // change on mainet
-    uint256 constant PRICE_PER_MINE = 0.001 ether; // change on mainet
+    uint256 constant PRICE_PER_MINE = 0.0004 ether; // change on mainet
     uint256 constant MAX_SUPPLY = 1_000_000_000 ether;
     uint256 constant TOKENS_PER_MINE = 50_000 ether;
     uint256 constant INIT_SUPPLY = (50 * MAX_SUPPLY) / 100; // 500M tokens
