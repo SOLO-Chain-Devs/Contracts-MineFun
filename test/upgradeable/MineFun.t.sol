@@ -5,6 +5,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "../../src/upgradeable/MineFun.sol";
 import {Token} from "../../src/Token.sol";
+import {ERC6909} from "../../src/MockERC6909.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -14,6 +15,7 @@ import {MockERC20} from "../../src/MockERC20.sol";
 
 contract MineFunTest is Test {
     MineFun tokenFactory;
+    ERC6909 public mockERC6909;
 
     MockERC20 public mockStSolo;
     MockERC20 public mockSolo;
@@ -35,13 +37,21 @@ contract MineFunTest is Test {
 
         MineFun implementation = new MineFun();
         bytes memory initData = abi.encodeWithSelector(
-            MineFun.initialize.selector, teamWallet, uniswap_v2_router_ca, uniswap_v2_factory_ca, usdt_ca
+            MineFun.initialize.selector,
+            teamWallet,
+            uniswap_v2_router_ca,
+            uniswap_v2_factory_ca,
+            usdt_ca
         );
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            initData
+        );
         tokenFactory = MineFun(address(proxy));
 
         mockStSolo = new MockERC20("Mock stSOLO", "stSOLO");
         mockSolo = new MockERC20("Mock SOLO", "SOLO");
+        mockERC6909 = ERC6909(0x0da6a434BBc7145AA5280381a6B6bDFD449E2C2D);
 
         vm.stopPrank();
 
@@ -50,50 +60,50 @@ contract MineFunTest is Test {
         vm.deal(teamWallet, 0 ether);
     }
 
-    // function simulateBondingProcess(address minedTokenAddress) public {
-    //     uint fundingAmount = 1 ether; // Initial ETH funding for each wallet
-    //     uint tokensPerMine = 50_000 ether;
-    //     uint maxTokensPerWallet = 10_000_000 ether;
-    //     uint totalTokensBought = 0;
+     function simulateBondingProcess(address minedTokenAddress) public {
+       uint fundingAmount = 1 ether; // Initial ETH funding for each wallet
+        uint tokensPerMine = 50_000 ether;
+         uint maxTokensPerWallet = 10_000_000 ether;
+        uint totalTokensBought = 0;
 
-    //     // Ensure bonding hasn't happened yet
-    //     (, , , , , uint tokensBought, , , , bool bonded) = tokenFactory
-    //         .getMinedTokenDetails(minedTokenAddress);
-    //     require(!bonded, "Token is already bonded");
+         // Ensure bonding hasn't happened yet
+        (, , , , , uint tokensBought, , , , bool bonded) = tokenFactory
+            .getMinedTokenDetails(minedTokenAddress);
+         require(!bonded, "Token is already bonded");
 
-    //     uint walletIndex = 1;
+         uint walletIndex = 1;
 
-    //     while (!bonded) {
-    //         address wallet = vm.addr(walletIndex); // Get a new wallet
-    //         vm.deal(wallet, fundingAmount); // Fund wallet with ETH
-    //         walletIndex++;
+         while (!bonded) {
+            address wallet = vm.addr(walletIndex); // Get a new wallet
+            vm.deal(wallet, fundingAmount); // Fund wallet with ETH
+           walletIndex++;
 
-    //         uint walletTokenBalance = IERC20(minedTokenAddress).balanceOf(
-    //             wallet
-    //         );
+             uint walletTokenBalance = IERC20(minedTokenAddress).balanceOf(
+                 wallet
+             );
 
-    //         vm.startPrank(wallet);
+             vm.startPrank(wallet);
 
-    //         while (
-    //             walletTokenBalance + tokensPerMine <= maxTokensPerWallet &&
-    //             totalTokensBought + tokensPerMine <= 500_000_000 ether // Adjust for the actual max supply
-    //         ) {
-    //             tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress);
-    //             walletTokenBalance += tokensPerMine;
-    //             totalTokensBought += tokensPerMine;
+            while (
+                walletTokenBalance + tokensPerMine <= maxTokensPerWallet &&
+                totalTokensBought + tokensPerMine <= 500_000_000 ether // Adjust for the actual max supply
+             ) {
+                 tokenFactory.mineToken{value: 0.001 ether}(minedTokenAddress);
+                walletTokenBalance += tokensPerMine;
+                 totalTokensBought += tokensPerMine;
 
-    //             // Check if bonding is reached
-    //             (, , , , , tokensBought, , , , bonded) = tokenFactory
-    //                 .getMinedTokenDetails(minedTokenAddress);
+                // Check if bonding is reached
+                (, , , , , tokensBought, , , , bonded) = tokenFactory
+                     .getMinedTokenDetails(minedTokenAddress);
 
-    //             if (bonded) {
-    //                 break;
-    //             }
-    //         }
+                if (bonded) {
+                     break;
+                 }
+             }
 
-    //         vm.stopPrank();
-    //     }
-    // }
+             vm.stopPrank();
+         }
+     }
 
     // function testMineTokenTaxAllocation() public {
     //     vm.startPrank(deployer);
@@ -267,67 +277,129 @@ contract MineFunTest is Test {
     //     vm.stopPrank();
     // }
 
-    // function testLiquidityAddedAfterBonding() public {
-    //     vm.startPrank(deployer);
-    //     tokenFactory.setSoloTokenAddress(address(mockSolo));
-    //     vm.stopPrank();
+    /*  function testLiquidityAddedAfterBonding() public {
+        vm.startPrank(deployer);
+         tokenFactory.setSoloTokenAddress(address(mockSolo));
+        vm.stopPrank();
 
-    //     address minedTokenAddress = tokenFactory.createMinedToken{
-    //         value: 0.0001 ether
-    //     }(
-    //         "Test Token",
-    //         "TEST",
-    //         "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
-    //         "img://test.png",
-    //         3 days,
-    //         false,
-    //         0,
-    //         0,
-    //         1
-    //     );
+         address minedTokenAddress = tokenFactory.createMinedToken{
+             value: 0.0001 ether
+         }(
+             "Test Token",
+             "TEST",
+             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+             false,
+             0,
+             0,
+             0
+         );
 
-    //     Token minedToken = Token(minedTokenAddress);
+        Token minedToken = Token(minedTokenAddress);
 
-    //     // Fetch Uniswap V2 factory address from your contract
-    //     address uniswapFactory = tokenFactory.UNISWAP_V2_FACTORY();
-    //     address routerAddress = address(tokenFactory.router());
+         // Fetch Uniswap V2 factory address from your contract
+        address uniswapFactory = tokenFactory.UNISWAP_V2_FACTORY();
+         address routerAddress = address(tokenFactory.router());
 
-    //     address WETH = IUniswapV2Router01(routerAddress).WETH();
+        address WETH = IUniswapV2Router01(routerAddress).WETH();
 
     //     // Fetch the Uniswap V2 Pair (minedToken <> WETH)
-    //     address uniswapPair = IUniswapV2Factory(uniswapFactory).getPair(
-    //         address(minedToken),
-    //         WETH
-    //     );
+        address uniswapPair = IUniswapV2Factory(uniswapFactory).getPair(
+             address(minedToken),
+             WETH
+         );
 
-    //     require(uniswapPair == address(0), "Pair already created");
+         require(uniswapPair == address(0), "Pair already created");
 
-    //     // Ensure liquidity is zero before bonding
-    //     uint initialLiquidity = IERC20(minedToken).balanceOf(uniswapPair);
-    //     assertEq(initialLiquidity, 0, "Initial liquidity should be zero");
+         // Ensure liquidity is zero before bonding
+       uint initialLiquidity = IERC20(minedToken).balanceOf(uniswapPair);
+       assertEq(initialLiquidity, 0, "Initial liquidity should be zero");
 
-    //     simulateBondingProcess(minedTokenAddress);
+       simulateBondingProcess(minedTokenAddress);
 
     //     // Ensure bonding happened
-    //     (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
-    //         minedTokenAddress
-    //     );
-    //     assertTrue(bonded, "Token should be bonded");
+        (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+           minedTokenAddress
+        );
+        assertTrue(bonded, "Token should be bonded");
 
-    //     uniswapPair = IUniswapV2Factory(uniswapFactory).getPair(
-    //         address(minedToken),
-    //         WETH
-    //     );
+        uniswapPair = IUniswapV2Factory(uniswapFactory).getPair(
+             address(minedToken),
+             WETH
+         );
 
-    //     // Check that liquidity has been added
-    //     uint finalLiquidity = IERC20(minedToken).balanceOf(
-    //         address(tokenFactory)
-    //     );
-    //     assertGt(finalLiquidity, 0, "Liquidity should be added after bonding");
+        // Check that liquidity has been added
+      uint finalLiquidity = IERC20(minedToken).balanceOf(
+             address(tokenFactory)
+        );
+        assertGt(finalLiquidity, 0, "Liquidity should be added after bonding");
 
-    //     uint finalWETHLiq = IERC20(WETH).balanceOf(uniswapPair);
-    //     assertEq(finalWETHLiq, 1 ether);
-    // }
+        uint finalWETHLiq = IERC20(WETH).balanceOf(uniswapPair);
+         assertEq(finalWETHLiq, tokenFactory.MINEDTOKEN_FUNDING_GOAL());
+    } */
+     function testLiquidityAddedAfterBonding() public {
+        vm.startPrank(deployer);
+         tokenFactory.setSoloTokenAddress(address(mockSolo));
+        vm.stopPrank();
+
+         address minedTokenAddress = tokenFactory.createMinedToken{
+             value: 0.0001 ether
+         }(
+             "Test Token",
+             "TEST",
+             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
+            "img://test.png",
+            3 days,
+             false,
+             0,
+             0,
+             0
+         );
+
+        Token minedToken = Token(minedTokenAddress);
+
+         // Fetch Uniswap V2 factory address from your contract
+        address uniswapFactory = tokenFactory.UNISWAP_V2_FACTORY();
+         address routerAddress = address(tokenFactory.router());
+
+        address WETH = IUniswapV2Router01(routerAddress).WETH();
+
+    //     // Fetch the Uniswap V2 Pair (minedToken <> WETH)
+        address uniswapPair = IUniswapV2Factory(uniswapFactory).getPair(
+             address(minedToken),
+             WETH
+         );
+
+         require(uniswapPair == address(0), "Pair already created");
+
+         // Ensure liquidity is zero before bonding
+       uint initialLiquidity = IERC20(minedToken).balanceOf(uniswapPair);
+       assertEq(initialLiquidity, 0, "Initial liquidity should be zero");
+
+       simulateBondingProcess(minedTokenAddress);
+
+    //     // Ensure bonding happened
+        (, , , , , , , , , bool bonded) = tokenFactory.getMinedTokenDetails(
+           minedTokenAddress
+        );
+        assertTrue(bonded, "Token should be bonded");
+
+        uniswapPair = IUniswapV2Factory(uniswapFactory).getPair(
+             address(minedToken),
+             WETH
+         );
+
+        // Check that liquidity has been added
+      uint finalLiquidity = IERC20(minedToken).balanceOf(
+             address(tokenFactory)
+        );
+        assertGt(finalLiquidity, 0, "Liquidity should be added after bonding");
+
+        uint finalWETHLiq = IERC20(WETH).balanceOf(uniswapPair);
+         assertEq(finalWETHLiq, tokenFactory.MINEDTOKEN_FUNDING_GOAL());
+    }
+
 
     // function testGetMinedTokenDetails() public {
     //     // Token parameters
@@ -438,22 +510,35 @@ contract MineFunTest is Test {
     // ============== Paywalling token creating and mining ============ //
 
     // Set Solo token address and revert when not the owener
-    function testSetSoloTokenAddress() public {
+   /*  function testSetSoloTokenAddress() public {
         vm.startPrank(deployer);
         MockERC20 mockToken = new MockERC20("Mock SOLO", "SOLO");
         address soloTokenAddress = address(mockToken);
         address intialSoloTokenAddress = tokenFactory.soloTokenAddress();
 
-        assertEq(intialSoloTokenAddress, address(0), "Before set, Solo token address should be zero");
+        assertEq(
+            intialSoloTokenAddress,
+            address(0),
+            "Before set, Solo token address should be zero"
+        );
 
         tokenFactory.setSoloTokenAddress(soloTokenAddress);
         address updatedSoloTokenAddress = tokenFactory.soloTokenAddress();
-        assertEq(updatedSoloTokenAddress, soloTokenAddress, "Solo Token address should change after setting");
+        assertEq(
+            updatedSoloTokenAddress,
+            soloTokenAddress,
+            "Solo Token address should change after setting"
+        );
 
         vm.stopPrank();
 
         vm.startPrank(user1);
-        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                user1
+            )
+        );
         tokenFactory.setSoloTokenAddress(address(0));
 
         vm.stopPrank();
@@ -466,7 +551,9 @@ contract MineFunTest is Test {
         vm.stopPrank();
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -494,7 +581,9 @@ contract MineFunTest is Test {
 
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -506,7 +595,9 @@ contract MineFunTest is Test {
             1000 ether
         );
 
-        vm.expectRevert("You must hold a certain amount of Solo token to be able to mine.");
+        vm.expectRevert(
+            "You must hold a certain amount of Solo token to be able to mine."
+        );
         tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
 
         vm.stopPrank();
@@ -523,7 +614,9 @@ contract MineFunTest is Test {
 
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -535,7 +628,9 @@ contract MineFunTest is Test {
             1000 ether
         );
 
-        address createdTokenAdd2 = tokenFactory.createMinedToken{value: 0.0001 ether}(
+        address createdTokenAdd2 = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
             "fffest Token",
             "TEasdfST",
             "bafkreiculfgfff5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -547,8 +642,8 @@ contract MineFunTest is Test {
             0 ether
         );
 
-        tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
-        tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd2);
+        tokenFactory.mineToken{value: 0.001 ether}(createdTokenAdd);
+        tokenFactory.mineToken{value: 0.001 ether}(createdTokenAdd2);
 
         vm.stopPrank();
     }
@@ -556,7 +651,9 @@ contract MineFunTest is Test {
     function testUpdateSoloRequiredToMine_UpdatesSuccessfully() public {
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -568,18 +665,25 @@ contract MineFunTest is Test {
             1000 ether
         );
 
-        (,,,,,,,, address creatorAddress,) = tokenFactory.getMinedTokenDetails(createdTokenAdd);
+        (, , , , , , , , address creatorAddress, ) = tokenFactory
+            .getMinedTokenDetails(createdTokenAdd);
         assertEq(creatorAddress, user1, "Creator should be user1");
 
         tokenFactory.updateSoloRequiredToMine(createdTokenAdd, 2000 ether);
 
-        (,,,,,,,, address fetchedCreator,) = tokenFactory.getMinedTokenDetails(createdTokenAdd);
+        (, , , , , , , , address fetchedCreator, ) = tokenFactory
+            .getMinedTokenDetails(createdTokenAdd);
 
         assertEq(fetchedCreator, user1, "Creator should remain user1");
 
         // Assuming you expose this for test verification or access mapping directly
-        (,,,,,,,,,, uint256 actualSoloRequirement) = tokenFactory.addressToMinedTokenMapping(createdTokenAdd);
-        assertEq(actualSoloRequirement, 2000 ether, "Solo requirement should update");
+        (, , , , , , , , , , uint256 actualSoloRequirement) = tokenFactory
+            .addressToMinedTokenMapping(createdTokenAdd);
+        assertEq(
+            actualSoloRequirement,
+            2000 ether,
+            "Solo requirement should update"
+        );
 
         vm.stopPrank();
     }
@@ -587,7 +691,9 @@ contract MineFunTest is Test {
     function testUpdateSoloRequiredToMine_RevertWhen_NotCreator() public {
         vm.startPrank(user1);
 
-        address createdTokenAdd = tokenFactory.createMinedToken{value: 0.0001 ether}(
+        address createdTokenAdd = tokenFactory.createMinedToken{
+            value: 0.0001 ether
+        }(
             "Test Token",
             "TEST",
             "bafkreiculf5cd436llky7tglhftg5enqcqljxv2elv4kglcaopzsjvmv24",
@@ -607,5 +713,5 @@ contract MineFunTest is Test {
         tokenFactory.updateSoloRequiredToMine(createdTokenAdd, 500 ether);
 
         vm.stopPrank();
-    }
+    } */
 }

@@ -7,6 +7,8 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./MineFunAdmin.sol";
 import "./IMineFun.sol";
+import {ERC6909} from "@openzeppelin/contracts/token/ERC6909/draft-ERC6909.sol";
+
 
 /**
  * @title MineFunCore
@@ -24,6 +26,8 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
      */
 
     address public soloTokenAddress;
+    ERC6909 public depinAddres;
+    
 
     // Upper limit to avoid a too high of a paywall
     uint256 public constant upperLimitMinSoloHeldForTokenCreation =
@@ -53,8 +57,8 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
             "Bonding time must be between 1 and 7 days"
         );
 
-        require(bytes(name).length <= 10, "Token name too long");
-        require(bytes(symbol).length <= 5, "Token symbol too long");
+        require(bytes(name).length <= 20, "Token name too long");
+        require(bytes(symbol).length <= 10, "Token symbol too long");
 
         uint timestamp;
         uint blockNum;

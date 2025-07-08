@@ -33,13 +33,13 @@ abstract contract MineFunStorage is Initializable {
     mapping(address => MinedToken) public addressToMinedTokenMapping;
 
     // Constants
-    uint256 constant MINEDTOKEN_CREATION_FEE = 0.0001 ether;
-    uint256 constant MINEDTOKEN_FUNDING_GOAL = 0.01 ether; // change on mainet
-    uint256 constant PRICE_PER_MINE = 0.0004 ether; // change on mainet
-    uint256 constant MAX_SUPPLY = 1_000_000_000 ether;
-    uint256 constant TOKENS_PER_MINE = 50_000 ether;
-    uint256 constant INIT_SUPPLY = (50 * MAX_SUPPLY) / 100; // 500M tokens
-    uint256 constant MAX_PER_WALLET = 10_000_000 ether;
+    uint256 public constant MINEDTOKEN_CREATION_FEE = 0.0001 ether;
+    uint256 public constant MINEDTOKEN_FUNDING_GOAL = 0.01 ether; // change on mainet
+    uint256 public constant PRICE_PER_MINE = 0.0004 ether; // change on mainet
+    uint256 public constant MAX_SUPPLY = 1_000_000_000 ether;
+    uint256 public constant TOKENS_PER_MINE = 50_000 ether;
+    uint256 public constant INIT_SUPPLY = (50 * MAX_SUPPLY) / 100; // 500M tokens
+    uint256 public constant MAX_PER_WALLET = 10_000_000 ether;
 
     address public UNISWAP_V2_FACTORY;
     address public UNISWAP_V2_ROUTER;
