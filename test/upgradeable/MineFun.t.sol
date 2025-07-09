@@ -5,7 +5,6 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "../../src/upgradeable/MineFun.sol";
 import {Token} from "../../src/Token.sol";
-import {ERC6909} from "../../src/MockERC6909.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -15,10 +14,11 @@ import {MockERC20} from "../../src/MockERC20.sol";
 
 contract MineFunTest is Test {
     MineFun tokenFactory;
-    ERC6909 public mockERC6909;
 
     MockERC20 public mockStSolo;
     MockERC20 public mockSolo;
+
+    uint256 mineCost;
 
     address deployer;
     address teamWallet = vm.addr(100); // Simulated team wallet
@@ -49,9 +49,10 @@ contract MineFunTest is Test {
         );
         tokenFactory = MineFun(address(proxy));
 
+
         mockStSolo = new MockERC20("Mock stSOLO", "stSOLO");
         mockSolo = new MockERC20("Mock SOLO", "SOLO");
-        mockERC6909 = ERC6909(0x0da6a434BBc7145AA5280381a6B6bDFD449E2C2D);
+        mineCost = tokenFactory.PRICE_PER_MINE();
 
         vm.stopPrank();
 
@@ -88,7 +89,7 @@ contract MineFunTest is Test {
                 walletTokenBalance + tokensPerMine <= maxTokensPerWallet &&
                 totalTokensBought + tokensPerMine <= 500_000_000 ether // Adjust for the actual max supply
              ) {
-                 tokenFactory.mineToken{value: 0.001 ether}(minedTokenAddress);
+                 tokenFactory.mineToken{value: mineCost}(minedTokenAddress);
                 walletTokenBalance += tokensPerMine;
                  totalTokensBought += tokensPerMine;
 
@@ -125,7 +126,7 @@ contract MineFunTest is Test {
     //     );
 
     //     vm.startPrank(user1);
-    //     tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress); // 0.2 ETH sent
+    //     tokenFactory.mineToken{value: mineCost}(minedTokenAddress); // 0.2 ETH sent
     //     vm.stopPrank();
 
     //     uint teamFundBalance = tokenFactory.teamFunds(minedTokenAddress);
@@ -192,7 +193,7 @@ contract MineFunTest is Test {
     //     );
 
     //     vm.startPrank(user1);
-    //     tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress); // Not enough to bond
+    //     tokenFactory.mineToken{value: mineCost}(minedTokenAddress); // Not enough to bond
     //     vm.stopPrank();
 
     //     vm.expectRevert("Token did not bond");
@@ -221,7 +222,7 @@ contract MineFunTest is Test {
     //     );
 
     //     vm.startPrank(user1);
-    //     tokenFactory.mineToken{value: 0.0002 ether}(minedTokenAddress); // 0.2 ETH total (50% to team)
+    //     tokenFactory.mineToken{value: mineCost}(minedTokenAddress); // 0.2 ETH total (50% to team)
     //     vm.stopPrank();
 
     //     uint initialBalance = user1.balance;
@@ -566,7 +567,7 @@ contract MineFunTest is Test {
         );
 
         vm.expectRevert("Solo token address not set");
-        tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
+        tokenFactory.mineToken{value: mineCost}(createdTokenAdd);
 
         vm.stopPrank();
     }
@@ -598,7 +599,7 @@ contract MineFunTest is Test {
         vm.expectRevert(
             "You must hold a certain amount of Solo token to be able to mine."
         );
-        tokenFactory.mineToken{value: 0.0002 ether}(createdTokenAdd);
+        tokenFactory.mineToken{value: mineCost}(createdTokenAdd);
 
         vm.stopPrank();
     }
@@ -642,8 +643,8 @@ contract MineFunTest is Test {
             0 ether
         );
 
-        tokenFactory.mineToken{value: 0.001 ether}(createdTokenAdd);
-        tokenFactory.mineToken{value: 0.001 ether}(createdTokenAdd2);
+        tokenFactory.mineToken{value: mineCost}(createdTokenAdd);
+        tokenFactory.mineToken{value: mineCost}(createdTokenAdd2);
 
         vm.stopPrank();
     }

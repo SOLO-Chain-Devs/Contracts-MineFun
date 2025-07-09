@@ -7,7 +7,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./MineFunAdmin.sol";
 import "./IMineFun.sol";
-import {ERC6909} from "@openzeppelin/contracts/token/ERC6909/draft-ERC6909.sol";
+import {DepinStaking} from "../MockDepinStaking.sol";
 
 
 /**
@@ -26,7 +26,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
      */
 
     address public soloTokenAddress;
-    ERC6909 public depinAddres;
+    DepinStaking public depinStakingContract;
     
 
     // Upper limit to avoid a too high of a paywall
@@ -35,6 +35,10 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
 
     function setSoloTokenAddress(address newToken) public onlyOwner {
         soloTokenAddress = newToken;
+    }
+
+    function setDepinStakingAddress(address _newDepinStakeContract) public onlyOwner{
+        depinStakingContract = DepinStaking(_newDepinStakeContract);
     }
 
     function createMinedToken(
@@ -165,12 +169,26 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
 
         require(msg.value == PRICE_PER_MINE, "Incorrect ETH amount sent");
 
-        uint256 ethForLiquidity = msg.value / 2;
-        uint256 ethForTeam = msg.value - ethForLiquidity;
-        teamFunds[minedTokenAddress] += ethForTeam;
+        bool hasStaked = depinStakingContract.isStaking(msg.sender);
 
-        uint256 totalTokensAfterPurchase = listedToken.tokensBought +
-            TOKENS_PER_MINE;
+        uint256 ethForLiquidity;
+        uint256 ethToProtocol;
+
+        uint256 tokensToMint = TOKENS_PER_MINE;
+
+        if (hasStaked) {
+            // User gets double tokens and all ETH goes to liquidity
+            tokensToMint = TOKENS_PER_MINE * 2;
+            ethForLiquidity = msg.value;
+            ethToProtocol = 0;
+        } else {
+            // Original logic
+            ethForLiquidity = msg.value / 2;
+            ethToProtocol = msg.value - ethForLiquidity;
+            teamFunds[minedTokenAddress] += ethToProtocol;
+        }
+
+        uint256 totalTokensAfterPurchase = listedToken.tokensBought + tokensToMint;
         require(
             totalTokensAfterPurchase <= INIT_SUPPLY,
             "Not enough tokens left"
@@ -181,7 +199,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         listedToken.tokensBought = totalTokensAfterPurchase;
         listedToken.contributions[msg.sender] += msg.value;
 
-        minedToken.mint(msg.sender, TOKENS_PER_MINE);
+        minedToken.mint(msg.sender, tokensToMint);
 
         emit TokenMined(minedTokenAddress, msg.sender, TOKENS_PER_MINE);
 
