@@ -57,7 +57,7 @@ contract DepinStakingMiningTest is Test {
         mockSolo = new MockERC20("Mock SOLO", "SOLO");
         depinNFT = new MockERC6909();
 
-        depinStaking = new DepinStaking(address(depinNFT));
+        depinStaking = new DepinStaking();
         tokenFactory.setDepinStakingAddress(address(depinStaking));
         mineCost = tokenFactory.PRICE_PER_MINE();
 
@@ -216,13 +216,13 @@ contract DepinStakingMiningTest is Test {
         depinNFT.mint(user1, 1, 1);
         assertTrue(depinNFT.balanceOf(user1, 1) == 1);
         depinNFT.approve(address(depinStaking), 1, 1);
-        depinStaking.stake(1, 1);
+        depinStaking.stake(address(depinNFT), 1, 1);
         assertTrue(depinStaking.isStaking(user1));
 
         //user 2 mines and receives Double amount of tokens
         assert(minedToken.balanceOf(user1) == 0);
         tokenFactory.mineToken{value: mineCost}(address(minedToken));
-        assert(minedToken.balanceOf(user1) == tokensPerMine*2);
+        assert(minedToken.balanceOf(user1) == tokensPerMine * 2);
 
         vm.stopPrank();
 
@@ -264,6 +264,6 @@ contract DepinStakingMiningTest is Test {
         assertGt(finalLiquidity, 0, "Liquidity should be added after bonding");
 
         uint finalWETHLiq = IERC20(WETH).balanceOf(uniswapPair);
-        assert(finalWETHLiq>= tokenFactory.MINEDTOKEN_FUNDING_GOAL());
+        assert(finalWETHLiq >= tokenFactory.MINEDTOKEN_FUNDING_GOAL());
     }
 }

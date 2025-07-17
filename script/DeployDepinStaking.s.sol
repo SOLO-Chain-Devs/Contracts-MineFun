@@ -12,18 +12,10 @@ contract RedeployImplementation is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        MockERC6909 mock = new MockERC6909();
-        mock.mint(msg.sender, 1, 1);
 
-        DepinStaking stakingContract = new DepinStaking(address(mock));
+        DepinStaking stakingContract = new DepinStaking();
 
-        mock.approve(address(stakingContract), 1, 1);
-        stakingContract.stake(1, 1);
-
-        bool isStaked = stakingContract.isStaking(msg.sender);
-        console.log("Is User Staking?: ",isStaked);
-
-        console.log("MockERC6909 deployed  at:", address(mock));
+      
         console.log("DepinStaking deployed  at:", address(stakingContract));
 
         vm.stopBroadcast();

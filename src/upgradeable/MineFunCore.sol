@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "forge-std/Test.sol";
 import "../Token.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -26,12 +25,12 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
      */
 
     address public soloTokenAddress;
-    DepinStaking public depinStakingContract;
     
 
     // Upper limit to avoid a too high of a paywall
     uint256 public constant upperLimitMinSoloHeldForTokenCreation =
         1000000 ether;
+    DepinStaking public depinStakingContract;
 
     function setSoloTokenAddress(address newToken) public onlyOwner {
         soloTokenAddress = newToken;

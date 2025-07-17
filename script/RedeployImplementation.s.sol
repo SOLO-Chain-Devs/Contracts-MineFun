@@ -9,7 +9,8 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 contract RedeployImplementation is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address proxyAddress = vm.envAddress("PROXY_ADDRESS"); // Existing proxy contract
+        address proxyAddress = vm.envAddress("PROXY_CA");
+        address depinStakingAddress = vm.envAddress("DEPIN_STAKING_CA"); // Existing proxy contract
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -21,6 +22,10 @@ contract RedeployImplementation is Script {
         ITransparentUpgradeableProxy proxy = ITransparentUpgradeableProxy(proxyAddress);
         proxy.upgradeToAndCall(address(newImplementation), "");
         console.log("Proxy upgraded to new implementation at:", address(newImplementation));
+
+        // set depin staking address
+        MineFun(proxyAddress).setDepinStakingAddress(address(depinStakingAddress));
+        console.log("Depin staking address set at:", address(depinStakingAddress));
 
         vm.stopBroadcast();
     }
