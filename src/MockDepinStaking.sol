@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC6909} from "@openzeppelin/contracts/token/ERC6909/draft-ERC6909.sol";
+import {ERC6909} from "./ERC6909.sol";
+
 
 contract DepinStaking {
     //mapping(address=> bool) public isAcceptedToken;

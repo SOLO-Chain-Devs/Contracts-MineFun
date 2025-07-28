@@ -6,14 +6,18 @@ import "forge-std/Test.sol";
 import "../../src/upgradeable/MineFun.sol";
 import {Token} from "../../src/Token.sol";
 import {DepinStaking} from "../../src/MockDepinStaking.sol";
-import {MockERC6909} from "../../src/MockERC6909.sol";
-
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC6909} from "../../src/ERC6909.sol";  
+import {MockERC20} from "../../src/MockERC20.sol";  
 
-import {MockERC20} from "../../src/MockERC20.sol";
+contract MockERC6909 is ERC6909 {
+        function mint(address to, uint256 tokenId, uint256 amount) public {
+        _mint(to, tokenId, amount);
+    }
+}
 
 contract DepinStakingMiningTest is Test {
     MineFun tokenFactory;

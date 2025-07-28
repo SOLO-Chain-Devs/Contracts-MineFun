@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
 import "../src/upgradeable/MineFun.sol";
-import "../src/MockERC6909.sol";
+import "../src/ERC6909.sol";
 import "../src/MockDepinStaking.sol";
 
 contract RedeployImplementation is Script {

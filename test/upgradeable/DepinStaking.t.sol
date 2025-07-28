@@ -4,12 +4,13 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import {DepinStaking} from "../../src/MockDepinStaking.sol";
-import {MockERC6909} from "../../src/MockERC6909.sol";
+import {ERC6909} from "../../src/ERC6909.sol";
+import {MockERC20} from "../../src/MockERC20.sol";
 
 contract MockDepinStakingTest is Test {
     DepinStaking public depinStaking;
-    MockERC6909 public mockToken1;
-    MockERC6909 public mockToken2;
+    MockERC20 public mockToken1;
+    MockERC20 public mockToken2;
 
     address deployer;
     address user1 = vm.addr(1);
@@ -25,18 +26,18 @@ contract MockDepinStakingTest is Test {
 
         // Deploy contracts
         depinStaking = new DepinStaking();
-        mockToken1 = new MockERC6909();
-        mockToken2 = new MockERC6909();
+                    mockToken1 = new MockERC20("MockToken1", "MT1");
+                    mockToken2 = new MockERC20("MockToken2", "MT2");
 
         vm.stopPrank();
 
         // Fund users with tokens
         vm.startPrank(deployer);
-        mockToken1.mint(user1, 1, 100); // user1 gets 100 of tokenId 1
-        mockToken1.mint(user2, 1, 50);  // user2 gets 50 of tokenId 1
-        mockToken1.mint(user1, 2, 200); // user1 gets 200 of tokenId 2
-        mockToken2.mint(user1, 1, 75);  // user1 gets 75 of tokenId 1 from token2
-        mockToken2.mint(user3, 1, 25);  // user3 gets 25 of tokenId 1 from token2
+        mockToken1.mint(user1, 100); // user1 gets 100 of tokenId 1
+        mockToken1.mint(user2, 50);  // user2 gets 50 of tokenId 1
+        mockToken1.mint(user1, 200); // user1 gets 200 of tokenId 2
+        mockToken2.mint(user1, 75);  // user1 gets 75 of tokenId 1 from token2
+        mockToken2.mint(user3, 25);  // user3 gets 25 of tokenId 1 from token2
         vm.stopPrank();
     }
 
@@ -44,7 +45,7 @@ contract MockDepinStakingTest is Test {
         vm.startPrank(user1);
         
         // Approve tokens for staking
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         
         // Stake tokens
         depinStaking.stake(address(mockToken1), 1, 50);
@@ -52,10 +53,10 @@ contract MockDepinStakingTest is Test {
         // Verify staked balance
         assertEq(depinStaking.stakedOf(user1, address(mockToken1), 1), 50, "Staked balance should be 50");
         assertTrue(depinStaking.isStaking(user1), "User should be staking");
-        
+
         // Verify token transfer
-        assertEq(mockToken1.balanceOf(user1, 1), 50, "User should have 50 tokens remaining");
-        assertEq(mockToken1.balanceOf(address(depinStaking), 1), 50, "Staking contract should have 50 tokens");
+        assertEq(mockToken1.balanceOf(user1), 50, "User should have 50 tokens remaining");
+        assertEq(mockToken1.balanceOf(address(depinStaking)), 50, "Staking contract should have 50 tokens");
         
         vm.stopPrank();
     }
@@ -64,8 +65,8 @@ contract MockDepinStakingTest is Test {
         vm.startPrank(user1);
         
         // Approve tokens for staking
-        mockToken1.approve(address(depinStaking), 1, 30);
-        mockToken1.approve(address(depinStaking), 2, 100);
+        mockToken1.approve(address(depinStaking), 30);
+        mockToken1.approve(address(depinStaking), 100);  
         
         // Stake different token IDs
         depinStaking.stake(address(mockToken1), 1, 30);
@@ -83,8 +84,8 @@ contract MockDepinStakingTest is Test {
         vm.startPrank(user1);
         
         // Approve tokens for staking
-        mockToken1.approve(address(depinStaking), 1, 40);
-        mockToken2.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 40);
+        mockToken2.approve(address(depinStaking), 50);
         
         // Stake different tokens
         depinStaking.stake(address(mockToken1), 1, 40);
@@ -102,7 +103,7 @@ contract MockDepinStakingTest is Test {
         vm.startPrank(user1);
         
         // Approve and stake tokens
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         
         // Unstake some tokens
@@ -113,8 +114,8 @@ contract MockDepinStakingTest is Test {
         assertTrue(depinStaking.isStaking(user1), "User should still be staking");
         
         // Verify token transfer back
-        assertEq(mockToken1.balanceOf(user1, 1), 70, "User should have 70 tokens (50 original - 50 staked + 20 unstaked)");
-        assertEq(mockToken1.balanceOf(address(depinStaking), 1), 30, "Staking contract should have 30 tokens");
+        assertEq(mockToken1.balanceOf(user1), 70, "User should have 70 tokens (50 original - 50 staked + 20 unstaked)");
+        assertEq(mockToken1.balanceOf(address(depinStaking)), 30, "Staking contract should have 30 tokens");
         
         vm.stopPrank();
     }
@@ -123,7 +124,7 @@ contract MockDepinStakingTest is Test {
         vm.startPrank(user1);
         
         // Approve and stake tokens
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         
         // Unstake all tokens
@@ -134,8 +135,8 @@ contract MockDepinStakingTest is Test {
         assertFalse(depinStaking.isStaking(user1), "User should not be staking");
         
         // Verify all tokens returned
-        assertEq(mockToken1.balanceOf(user1, 1), 100, "User should have all tokens back");
-        assertEq(mockToken1.balanceOf(address(depinStaking), 1), 0, "Staking contract should have no tokens");
+        assertEq(mockToken1.balanceOf(user1), 100, "User should have all tokens back");
+        assertEq(mockToken1.balanceOf(address(depinStaking)), 0, "Staking contract should have no tokens");
         
         vm.stopPrank();
     }
@@ -143,7 +144,7 @@ contract MockDepinStakingTest is Test {
     function test_StakeZeroAmount() public {
         vm.startPrank(user1);
         
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         
         vm.expectRevert("Cannot stake 0");
         depinStaking.stake(address(mockToken1), 1, 0);
@@ -154,7 +155,7 @@ contract MockDepinStakingTest is Test {
     function test_UnstakeZeroAmount() public {
         vm.startPrank(user1);
         
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         
         vm.expectRevert("Cannot unstake 0");
@@ -166,7 +167,7 @@ contract MockDepinStakingTest is Test {
     function test_UnstakeMoreThanStaked() public {
         vm.startPrank(user1);
         
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         
         vm.expectRevert("Not enough staked");
@@ -198,19 +199,19 @@ contract MockDepinStakingTest is Test {
     function test_MultipleUsersStaking() public {
         // User1 stakes
         vm.startPrank(user1);
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         vm.stopPrank();
         
         // User2 stakes
         vm.startPrank(user2);
-        mockToken1.approve(address(depinStaking), 1, 30);
+        mockToken1.approve(address(depinStaking), 30);
         depinStaking.stake(address(mockToken1), 1, 30);
         vm.stopPrank();
         
         // User3 stakes different token
         vm.startPrank(user3);
-        mockToken2.approve(address(depinStaking), 1, 25);
+        mockToken2.approve(address(depinStaking), 25);
         depinStaking.stake(address(mockToken2), 1, 25);
         vm.stopPrank();
         
@@ -228,7 +229,7 @@ contract MockDepinStakingTest is Test {
     function test_StakeAndUnstakeMultipleTimes() public {
         vm.startPrank(user1);
         
-        mockToken1.approve(address(depinStaking), 1, 100);
+        mockToken1.approve(address(depinStaking), 100);
         
         // First stake
         depinStaking.stake(address(mockToken1), 1, 30);
@@ -257,8 +258,8 @@ contract MockDepinStakingTest is Test {
     function test_StakeDifferentTokenIds() public {
         vm.startPrank(user1);
         
-        mockToken1.approve(address(depinStaking), 1, 50);
-        mockToken1.approve(address(depinStaking), 2, 100);
+                        mockToken1.approve(address(depinStaking), 50);
+        mockToken1.approve(address(depinStaking), 100);
         
         // Stake different token IDs
         depinStaking.stake(address(mockToken1), 1, 50);
@@ -283,7 +284,7 @@ contract MockDepinStakingTest is Test {
         
         // User1 stakes
         vm.startPrank(user1);
-        mockToken1.approve(address(depinStaking), 1, 50);
+        mockToken1.approve(address(depinStaking), 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         vm.stopPrank();
         
