@@ -13,6 +13,12 @@ contract DepinStaking {
     // Tracks total staked across all tokenIds for quick checks
     mapping(address => uint256) private _totalStaked;
 
+    // user => tokenAddress => tokenId => last stake timestamp
+    mapping(address => mapping(address => mapping(uint256 => uint256))) public lastStakeTimestamp;
+
+    // Required lock period before unstaking
+    uint256 public constant LOCK_PERIOD = 7 days;
+
     event Staked(address indexed user, address indexed token, uint256 indexed tokenId, uint256 amount);
     event Unstaked(address indexed user, address indexed token, uint256 indexed tokenId, uint256 amount);
 
@@ -34,6 +40,9 @@ contract DepinStaking {
         stakedBalance[msg.sender][_token][_tokenId] += _amount;
         _totalStaked[msg.sender] += _amount;
 
+        // Reset lock to now on each stake (new stake restarts the 7-day timer)
+        lastStakeTimestamp[msg.sender][_token][_tokenId] = block.timestamp;
+
         // Transfer tokens from user to staking contract
         bool success = ERC6909(_token).transferFrom(msg.sender, address(this), _tokenId, _amount);
         require(success, "Transfer failed");
@@ -45,6 +54,10 @@ contract DepinStaking {
         uint256 staked = stakedBalance[msg.sender][_token][_tokenId];
         require(_amount > 0, "Cannot unstake 0");
         require(staked >= _amount, "Not enough staked");
+
+        // Enforce 7-day lock from the most recent stake time
+        uint256 stakedAt = lastStakeTimestamp[msg.sender][_token][_tokenId];
+        require(stakedAt != 0 && block.timestamp >= stakedAt + LOCK_PERIOD, "Stake is locked");
 
         // Update staked balance
         stakedBalance[msg.sender][_token][_tokenId] -= _amount;
@@ -63,5 +76,11 @@ contract DepinStaking {
 
     function isStaking(address user) external view returns (bool) {
         return _totalStaked[user] > 0;
+    }
+
+    function unlockTime(address user, address token, uint256 tokenId) external view returns (uint256) {
+        uint256 stakedAt = lastStakeTimestamp[user][token][tokenId];
+        if (stakedAt == 0) return 0;
+        return stakedAt + LOCK_PERIOD;
     }
 }
