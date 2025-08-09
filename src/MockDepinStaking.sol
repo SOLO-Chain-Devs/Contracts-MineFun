@@ -2,9 +2,11 @@
 pragma solidity ^0.8.20;
 
 import {ERC6909} from "./ERC6909.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 
-contract DepinStaking {
+contract DepinStaking is Initializable, OwnableUpgradeable {
     //mapping(address=> bool) public isAcceptedToken;
 
     // user => tokenAddress => tokenId => staked amount
@@ -22,7 +24,14 @@ contract DepinStaking {
     event Staked(address indexed user, address indexed token, uint256 indexed tokenId, uint256 amount);
     event Unstaked(address indexed user, address indexed token, uint256 indexed tokenId, uint256 amount);
 
-    constructor() {    }
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
+    }
 
     /* function updateAcceptedToken(address token, bool _isAccepted) public {
         isAcceptedToken[token] = _isAccepted;
@@ -83,4 +92,6 @@ contract DepinStaking {
         if (stakedAt == 0) return 0;
         return stakedAt + LOCK_PERIOD;
     }
+
+    // Transparent proxy pattern uses ProxyAdmin for upgrades; no authorize hook needed.
 }
