@@ -6,32 +6,31 @@ import "forge-std/console2.sol";
 import "../src/MockDepinStaking.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract DeployDepinStaking is Script {
+contract UpgradeDepinStaking is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
+        address proxy = vm.envAddress("DEPIN_PROXY");
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy implementation
-        DepinStaking implementation = new DepinStaking();
-        console.log("DepinStaking implementation:", address(implementation));
+        // Deploy new implementation
+        DepinStaking newImplementation = new DepinStaking();
+        console.log("New DepinStaking implementation:", address(newImplementation));
 
-        // Prepare initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            DepinStaking.initialize.selector,
-            deployer // deployer is the owner
+        // Upgrade proxy directly (deployer is the admin)
+        // For TransparentUpgradeableProxy, we need to call upgradeToAndCall through the admin
+        // Since deployer is the admin, we can call it directly
+        (bool success, ) = proxy.call(
+            abi.encodeWithSignature(
+                "upgradeToAndCall(address,bytes)",
+                address(newImplementation),
+                bytes("")
+            )
         );
+        require(success, "Upgrade failed");
 
-        // Deploy proxy with deployer as admin (no ProxyAdmin)
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(implementation),
-            deployer, // deployer is the admin
-            initData
-        );
-        console.log("DepinStaking proxy:", address(proxy));
-
-        // Write addresses to env file
+        // Update env file with new implementation address
         string memory envPath = ".env.depin";
         string memory content = string(
             abi.encodePacked(
@@ -39,15 +38,15 @@ contract DeployDepinStaking is Script {
                 _toHexString(deployer),
                 "\n",
                 "DEPIN_PROXY=",
-                _toHexString(address(proxy)),
+                _toHexString(proxy),
                 "\n",
                 "DEPIN_IMPLEMENTATION=",
-                _toHexString(address(implementation)),
+                _toHexString(address(newImplementation)),
                 "\n"
             )
         );
         vm.writeFile(envPath, content);
-        console2.log("Wrote addresses to ", envPath);
+        console2.log("Updated ", envPath);
 
         vm.stopBroadcast();
     }

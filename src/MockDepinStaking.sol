@@ -18,8 +18,8 @@ contract DepinStaking is Initializable, OwnableUpgradeable {
     // user => tokenAddress => tokenId => last stake timestamp
     mapping(address => mapping(address => mapping(uint256 => uint256))) public lastStakeTimestamp;
 
-    // Required lock period before unstaking
-    uint256 public constant LOCK_PERIOD = 7 days;
+    // Required lock period before unstaking (changeable by owner)
+    uint256 public lockPeriod = 7 days;
 
     event Staked(address indexed user, address indexed token, uint256 indexed tokenId, uint256 amount);
     event Unstaked(address indexed user, address indexed token, uint256 indexed tokenId, uint256 amount);
@@ -64,9 +64,9 @@ contract DepinStaking is Initializable, OwnableUpgradeable {
         require(_amount > 0, "Cannot unstake 0");
         require(staked >= _amount, "Not enough staked");
 
-        // Enforce 7-day lock from the most recent stake time
+        // Enforce lock period from the most recent stake time
         uint256 stakedAt = lastStakeTimestamp[msg.sender][_token][_tokenId];
-        require(stakedAt != 0 && block.timestamp >= stakedAt + LOCK_PERIOD, "Stake is locked");
+        require(stakedAt != 0 && block.timestamp >= stakedAt + lockPeriod, "Stake is locked");
 
         // Update staked balance
         stakedBalance[msg.sender][_token][_tokenId] -= _amount;
@@ -90,7 +90,16 @@ contract DepinStaking is Initializable, OwnableUpgradeable {
     function unlockTime(address user, address token, uint256 tokenId) external view returns (uint256) {
         uint256 stakedAt = lastStakeTimestamp[user][token][tokenId];
         if (stakedAt == 0) return 0;
-        return stakedAt + LOCK_PERIOD;
+        return stakedAt + lockPeriod;
+    }
+
+    /**
+     * @dev Set the lock period for staking. Only callable by owner.
+     * @param _lockPeriod New lock period in seconds
+     */
+    function setLockPeriod(uint256 _lockPeriod) external onlyOwner {
+        require(_lockPeriod > 0, "Lock period must be greater than 0");
+        lockPeriod = _lockPeriod;
     }
 
     // Transparent proxy pattern uses ProxyAdmin for upgrades; no authorize hook needed.
