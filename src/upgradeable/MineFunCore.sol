@@ -6,7 +6,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./MineFunAdmin.sol";
 import "./IMineFun.sol";
-import {DepinStaking} from "../MockDepinStaking.sol";
+import {DepinStaking} from "../DepinStaking.sol";
 
 
 /**

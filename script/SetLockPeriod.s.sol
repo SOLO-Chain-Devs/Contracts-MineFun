@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
-import "../src/MockDepinStaking.sol";
+import "../src/DepinStaking.sol";
 
 contract SetLockPeriod is Script {
     function run() external {

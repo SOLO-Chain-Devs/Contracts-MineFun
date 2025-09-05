@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "../../src/upgradeable/MineFun.sol";
 import {Token} from "../../src/Token.sol";
-import {DepinStaking} from "../../src/MockDepinStaking.sol";
+import {DepinStaking} from "../../src/DepinStaking.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";

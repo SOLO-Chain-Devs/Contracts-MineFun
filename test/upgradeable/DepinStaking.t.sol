@@ -3,7 +3,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {DepinStaking} from "../../src/MockDepinStaking.sol";
+import {DepinStaking} from "../../src/DepinStaking.sol";
 import {ERC6909} from "../../src/ERC6909.sol";
 import {MockERC6909} from "lib/solmate/src/test/utils/mocks/MockERC6909.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -36,6 +36,9 @@ contract MockDepinStakingTest is Test {
             initData
         );
         depinStaking = DepinStaking(address(proxy));
+
+        // Set lock period to 7 days for testing
+        depinStaking.setLockPeriod(7 days);
 
         // Deploy mock ERC6909 tokens
         mockToken1 = new MockERC6909();
@@ -119,12 +122,13 @@ contract MockDepinStakingTest is Test {
         mockToken1.approve(address(depinStaking), 1, 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         
-        // Attempt to unstake before 7 days should revert
+        // Attempt to unstake before lock period should revert
         vm.expectRevert("Stake is locked");
         depinStaking.unstake(address(mockToken1), 1, 20);
 
-        // Warp past the 7-day lock and then unstake some tokens
-        vm.warp(block.timestamp + 7 days + 1);
+        // Warp past the lock period and then unstake some tokens
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
         depinStaking.unstake(address(mockToken1), 1, 20);
         
         // Verify remaining staked balance
@@ -145,12 +149,13 @@ contract MockDepinStakingTest is Test {
         mockToken1.approve(address(depinStaking), 1, 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         
-        // Attempt to unstake before 7 days should revert
+        // Attempt to unstake before lock period should revert
         vm.expectRevert("Stake is locked");
         depinStaking.unstake(address(mockToken1), 1, 50);
 
         // Unstake all tokens after lock
-        vm.warp(block.timestamp + 7 days + 1);
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
         depinStaking.unstake(address(mockToken1), 1, 50);
         
         // Verify no staked balance
@@ -193,8 +198,9 @@ contract MockDepinStakingTest is Test {
         mockToken1.approve(address(depinStaking), 1, 50);
         depinStaking.stake(address(mockToken1), 1, 50);
         
-        // Even though not enough staked, lock will revert first if within 7 days; bypass by warping
-        vm.warp(block.timestamp + 7 days + 1);
+        // Even though not enough staked, lock will revert first if within lock period; bypass by warping
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
         vm.expectRevert("Not enough staked");
         depinStaking.unstake(address(mockToken1), 1, 60);
         
@@ -205,7 +211,8 @@ contract MockDepinStakingTest is Test {
         vm.startPrank(user1);
         
         // Nothing staked; warp to avoid lock branch
-        vm.warp(block.timestamp + 7 days + 1);
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
         vm.expectRevert("Not enough staked");
         depinStaking.unstake(address(mockToken1), 1, 10);
         
@@ -267,7 +274,8 @@ contract MockDepinStakingTest is Test {
         assertEq(depinStaking.stakedOf(user1, address(mockToken1), 1), 50, "Total staked should be 50");
         
         // First unstake after lock
-        vm.warp(block.timestamp + 7 days + 1);
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
         depinStaking.unstake(address(mockToken1), 1, 15);
         assertEq(depinStaking.stakedOf(user1, address(mockToken1), 1), 35, "After first unstake should be 35");
         
@@ -298,7 +306,8 @@ contract MockDepinStakingTest is Test {
         assertEq(depinStaking.stakedOf(user1, address(mockToken1), 2), 100, "TokenId 2 should be 100");
         
         // Unstake from one tokenId after lock
-        vm.warp(block.timestamp + 7 days + 1);
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
         depinStaking.unstake(address(mockToken1), 1, 30);
         assertEq(depinStaking.stakedOf(user1, address(mockToken1), 1), 20, "TokenId 1 should be 20");
         assertEq(depinStaking.stakedOf(user1, address(mockToken1), 2), 100, "TokenId 2 should still be 100");
@@ -322,7 +331,8 @@ contract MockDepinStakingTest is Test {
         
         // User1 unstakes everything after lock
         vm.startPrank(user1);
-        vm.warp(block.timestamp + 7 days + 1);
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
         depinStaking.unstake(address(mockToken1), 1, 50);
         vm.stopPrank();
         
