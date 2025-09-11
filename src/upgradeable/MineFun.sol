@@ -32,5 +32,6 @@ contract MineFun is MineFunView {
 
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
     }
 }

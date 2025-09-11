@@ -139,7 +139,7 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
         return minedTokenAddress;
     }
 
-    function mineToken(address minedTokenAddress) public payable override {
+    function mineToken(address minedTokenAddress) public payable override nonReentrant {
         MinedToken storage listedToken = addressToMinedTokenMapping[
             minedTokenAddress
         ];
@@ -295,18 +295,37 @@ abstract contract MineFunCore is MineFunAdmin, IMineFun {
 
         Token minedToken = Token(minedTokenAddress);
         minedToken.launchToken();
-        uint256 userTokens = (contribution / PRICE_PER_MINE) * TOKENS_PER_MINE;
+        
+        // Get actual token balance to handle both staked (2x) and non-staked cases
+        uint256 userTokens = minedToken.balanceOf(msg.sender);
+        require(userTokens > 0, "No tokens to refund");
 
         minedToken.burn(msg.sender, userTokens);
         listedToken.contributions[msg.sender] = 0;
 
+        // Calculate refund based on whether user got bonus tokens
         uint256 refundAmount = contribution;
-        uint256 teamFundForToken = teamFunds[minedTokenAddress];
-        if (teamFundForToken > 0) {
-            teamFunds[minedTokenAddress] -= contribution / 2; // Remove team's portion too
-            refundAmount = contribution;
+        
+        // If user has 2x tokens per contribution, they were staking (all ETH went to liquidity)
+        uint256 expectedNonStakedTokens = (contribution / PRICE_PER_MINE) * TOKENS_PER_MINE;
+        bool wasStaking = userTokens > expectedNonStakedTokens;
+        
+        if (!wasStaking) {
+            // User wasn't staking, so half went to team funds
+            uint256 teamPortion = contribution / 2;
+            if (teamFunds[minedTokenAddress] >= teamPortion) {
+                teamFunds[minedTokenAddress] -= teamPortion;
+            } else {
+                // Team already withdrew, can only refund remaining
+                refundAmount = contribution / 2 + teamFunds[minedTokenAddress];
+                teamFunds[minedTokenAddress] = 0;
+            }
         }
-
+        // If wasStaking, full refund since all ETH went to liquidity
+        
+        listedToken.fundingRaised -= wasStaking ? contribution : contribution / 2;
+        
+        require(address(this).balance >= refundAmount, "Insufficient contract balance");
         payable(msg.sender).transfer(refundAmount);
 
         emit ContributionRefunded(minedTokenAddress, msg.sender, refundAmount);

@@ -3,13 +3,14 @@ pragma solidity ^0.8.24;
 
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./IMineFun.sol";
 
 /**
  * @title MineFunStorage
  * @dev Storage variables and structs for MineFun platform
  */
-abstract contract MineFunStorage is Initializable {
+abstract contract MineFunStorage is Initializable, ReentrancyGuardUpgradeable {
     IUniswapV2Router01 public router;
     address public teamWallet; // Team wallet address
     mapping(address => uint256) public teamFunds; // Tracks ETH allocated for team wallet per token

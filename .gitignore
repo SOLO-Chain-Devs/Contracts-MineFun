@@ -7,6 +7,6 @@ broadcast/
 
 # Docs
 docs/
-
+DEPLOYMENT.md
 # Dotenv file
 .env

@@ -22,6 +22,10 @@ contract Token is ERC20, Ownable {
     }
 
     function burn(address _account, uint256 _amount) public {
+        require(
+            msg.sender == owner() || msg.sender == _account,
+            "Can only burn own tokens or via MineFun"
+        );
         _burn(_account, _amount);
     }
 
