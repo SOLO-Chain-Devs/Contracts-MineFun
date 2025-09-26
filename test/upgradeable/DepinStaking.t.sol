@@ -338,4 +338,103 @@ contract MockDepinStakingTest is Test {
         
         assertFalse(depinStaking.isStaking(user1), "User1 should not be staking after unstaking all");
     }
+
+    function test_SetLockPeriod_Success() public {
+        vm.startPrank(deployer);
+        
+        // Test setting a new lock period
+        uint256 newLockPeriod = 14 days;
+        depinStaking.setLockPeriod(newLockPeriod);
+        
+        assertEq(depinStaking.lockPeriod(), newLockPeriod, "Lock period should be updated");
+        
+        vm.stopPrank();
+    }
+
+    function test_SetLockPeriod_RevertWhen_ZeroValue() public {
+        vm.startPrank(deployer);
+        
+        vm.expectRevert("Lock period must be greater than 0");
+        depinStaking.setLockPeriod(0);
+        
+        vm.stopPrank();
+    }
+
+    function test_SetLockPeriod_RevertWhen_NotOwner() public {
+        vm.startPrank(user1);
+        
+        vm.expectRevert();
+        depinStaking.setLockPeriod(14 days);
+        
+        vm.stopPrank();
+    }
+
+    function test_UnlockTime_ForStakedTokens() public {
+        vm.startPrank(user1);
+        
+        mockToken1.approve(address(depinStaking), 1, 50);
+        
+        // Record timestamp before staking
+        uint256 stakeTime = block.timestamp;
+        depinStaking.stake(address(mockToken1), 1, 50);
+        
+        uint256 expectedUnlockTime = stakeTime + depinStaking.lockPeriod();
+        uint256 actualUnlockTime = depinStaking.unlockTime(user1, address(mockToken1), 1);
+        
+        assertEq(actualUnlockTime, expectedUnlockTime, "Unlock time should match stake time + lock period");
+        
+        vm.stopPrank();
+    }
+
+    function test_UnlockTime_ForUnstakedTokens() public {
+        // Test unlock time for tokens that were never staked
+        uint256 unlockTime = depinStaking.unlockTime(user1, address(mockToken1), 1);
+        assertEq(unlockTime, 0, "Unlock time should be 0 for unstaked tokens");
+    }
+
+    function test_UnlockTime_AfterUnstaking() public {
+        vm.startPrank(user1);
+        
+        mockToken1.approve(address(depinStaking), 1, 50);
+        depinStaking.stake(address(mockToken1), 1, 50);
+        
+        // Wait for lock period and unstake
+        uint256 lockPeriod = depinStaking.lockPeriod();
+        vm.warp(block.timestamp + lockPeriod + 1);
+        depinStaking.unstake(address(mockToken1), 1, 50);
+        
+        // Unlock time should still reflect the last stake time
+        uint256 unlockTime = depinStaking.unlockTime(user1, address(mockToken1), 1);
+        assertGt(unlockTime, 0, "Unlock time should still be set after unstaking");
+        
+        vm.stopPrank();
+    }
+
+    function test_StakeResetsLockPeriod() public {
+        vm.startPrank(user1);
+        
+        mockToken1.approve(address(depinStaking), 1, 100);
+        
+        // First stake
+        uint256 firstStakeTime = block.timestamp;
+        depinStaking.stake(address(mockToken1), 1, 30);
+        
+        // Wait 3 days
+        vm.warp(block.timestamp + 3 days);
+        
+        // Second stake should reset the lock period
+        uint256 secondStakeTime = block.timestamp;
+        depinStaking.stake(address(mockToken1), 1, 20);
+        
+        uint256 unlockTime = depinStaking.unlockTime(user1, address(mockToken1), 1);
+        uint256 expectedUnlockTime = secondStakeTime + depinStaking.lockPeriod();
+        
+        assertEq(unlockTime, expectedUnlockTime, "Lock period should reset with new stake");
+        
+        // Should not be able to unstake using original timeline
+        vm.expectRevert("Stake is locked");
+        depinStaking.unstake(address(mockToken1), 1, 10);
+        
+        vm.stopPrank();
+    }
 } 
